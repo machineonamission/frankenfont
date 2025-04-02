@@ -1,0 +1,24 @@
+{
+  // Comments are accepted in the manifest, even though it is JSON.
+  "$schema": "https://json.schemastore.org/chrome-manifest.json",
+  "manifest_version": 3,
+  "name": "Font Replacer Extension",
+  "description": "An extension that smartly and aggressively replaces all fonts on all websites.",
+  "version": "0.0.1",
+//  "icons": {
+//    "16": "logo/logo-16.png",
+//    "48": "logo/logo-48.png",
+//    "128": "logo/logo-128.png"
+//  },
+  "options_page": "settings/index.html",
+  "action": {
+    "default_title": "Chrome Addon v3 Starter",
+    "default_popup": "popup/index.html"
+  },
+  "permissions": [],
+  "content_scripts": [{
+    "js": ["content.js"],
+    "matches": ["<all_urls>"],
+    "run_at": "document_end"
+  }]
+}
