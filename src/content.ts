@@ -12,7 +12,7 @@ let config: {
     "font-options": {
         serif: string,
         "sans-serif": string,
-        mono: string,
+        monospace: string,
         fantasy: string,
         cursive: string
     },
@@ -24,7 +24,7 @@ let config: {
     "font-options": {
         "serif": "Atkinson Hyperlegible Next",
         "sans-serif": "Atkinson Hyperlegible Next",
-        "mono": "Atkinson Hyperlegible Mono",
+        "monospace": "Atkinson Hyperlegible Mono",
         "fantasy": "Atkinson Hyperlegible Next",
         "cursive": "Atkinson Hyperlegible Next"
     },
@@ -67,15 +67,34 @@ if (config.mode === "css") {
         return "none"
     }
 
+    function get_computed_style(selector: string, property: string): string | null {
+        try {
+            let doc = document.querySelector(selector);
+            if (!doc) {
+                doc = document.documentElement;
+            }
+            return window.getComputedStyle(doc).getPropertyValue(property);
+        } catch (e) {
+            console.error("Error getting computed style", e);
+            return null;
+        }
+    }
+
     function handle_direct_declarations(rule: CSSStyleRule, override_styles: CSSStyleSheet) {
         let style = rule.style;
         let font = style["font" as keyof typeof style] as string | null;
         let fonts: string[] = [];
         if (font && !css_noops.includes(font)) {
+            if(font.includes("var(")) {
+                font = get_computed_style(rule.selectorText, "font") || font;
+            }
             fonts = parseFont(font)["font-family"];
         }
         let font_family = style["font-family" as keyof typeof style] as string | null;
         if (font_family && !css_noops.includes(font_family)) {
+            if(font_family.includes("var(")) {
+                font_family = get_computed_style(rule.selectorText, "font-family") || font_family;
+            }
             fonts = parseFontFamily(font_family);
         }
         if (fonts) {
@@ -94,20 +113,42 @@ if (config.mode === "css") {
     function handle_variables(rule: CSSStyleRule, override_styles: CSSStyleSheet) {
         for (const style of rule.style) {
             if (style.startsWith("--")) {
-                let original_value = rule.style.getPropertyValue(style);
-                let fonts = parseFont(original_value)["font-family"];
-                if (fonts) {
-                    let fonttype = get_font_type(fonts);
-                    if (fonttype !== "none") {
-                        let new_font = config["font-options"][fonttype as keyof typeof config["font-options"]];
-                        fonts.unshift(new_font)
-                        let new_font_family = fonts.map(f => `"${f}"`).join(", ");
-                        if (new_font) {
-                            override_styles.insertRule(`${rule.selectorText} { ${style}: ${new_font_family} !important; }`);
+                try {
+                    let original_value = rule.style.getPropertyValue(style);
+                    if (original_value.includes("var(")) {
+                        try {
+                            let doc: Element;
+                            if (rule.selectorText.startsWith(":")) {
+                                doc = document.documentElement;
+                            } else {
+                                doc = document.querySelector(rule.selectorText) as Element;
+                            }
+                            original_value = window.getComputedStyle(doc).getPropertyValue(style);
+                        } catch (e) {
+                            console.error("Error getting computed style", e);
                         }
                     }
+                    let fonts: string[] | null = null;
+                    let parsed = parseFont(original_value);
+                    if (parsed) {
+                        fonts = parsed["font-family"];
+                    } else {
+                        fonts = parseFontFamily(original_value);
+                    }
+                    if (fonts) {
+                        let fonttype = get_font_type(fonts);
+                        if (fonttype !== "none") {
+                            let new_font = config["font-options"][fonttype as keyof typeof config["font-options"]];
+                            fonts.unshift(new_font)
+                            let new_font_family = fonts.map(f => `"${f}"`).join(", ");
+                            if (new_font) {
+                                override_styles.insertRule(`${rule.selectorText} { ${style}: ${new_font_family} !important; }`);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error handling css variable", e);
                 }
-
             }
         }
     }
@@ -118,8 +159,13 @@ if (config.mode === "css") {
         for (let rule of rules) {
             // for all normal rules
             if (rule instanceof CSSStyleRule) {
-                handle_direct_declarations(rule, override_styles);
-                // handle_variables(rule, override_styles);
+                try {
+                    handle_direct_declarations(rule, override_styles);
+                    // handle_variables(rule, override_styles);
+                } catch (e) {
+                    console.error("Error handling css rule", e);
+                }
+
             }
         }
         document.adoptedStyleSheets.push(override_styles);
@@ -137,25 +183,32 @@ if (config.mode === "css") {
     }
 
     function handle_link(node: HTMLLinkElement) {
-        try {
-            if (node.sheet) {
-                handle_css(node.sheet.cssRules)
+        let rules: CSSRuleList | null = null;
+        node.addEventListener("load", () => {
+            try {
+                if (node.sheet) {
+                    rules = node.sheet.cssRules;
+                }
+            } catch (e) {
+                if ((e as DOMException).name === "SecurityError") {
+                    chrome.runtime.sendMessage(node.href, (r: { "status": "ok", "text": string }
+                        | { "status": "error", "error": string }
+                    ) => {
+                        if (r.status === "ok") {
+                            parse_css(r.text)
+                        } else {
+                            console.error("Error fetching css file", r.error);
+                        }
+                    });
+                } else {
+                    console.error("Unknown Error at accessing cssRules", e);
+                }
+            } finally {
+                if (rules) {
+                    handle_css(rules);
+                }
             }
-        } catch (e) {
-            if ((e as DOMException).name === "SecurityError") {
-                chrome.runtime.sendMessage(node.href, (r: { "status": "ok", "text": string }
-                    | { "status": "error", "error": string }
-                ) => {
-                    if (r.status === "ok") {
-                        parse_css(r.text)
-                    } else {
-                        console.error("Error fetching css file", r.error);
-                    }
-                });
-            } else {
-                console.error("Unknown Error at accessing cssRules", e);
-            }
-        }
+        });
     }
 
     // Set up a MutationObserver to watch for added nodes (in document.head and optionally elsewhere)
