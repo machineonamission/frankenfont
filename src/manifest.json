@@ -16,9 +16,16 @@
     "default_popup": "popup/index.html"
   },
   "permissions": [],
+  "host_permissions": [
+    "*://*/*"
+  ],
+  "background": {
+    "service_worker": "cors.js",
+    "type": "module"
+  },
   "content_scripts": [{
-    "js": ["content.js"],
+    "js": ["parser.js","content.js"],
     "matches": ["<all_urls>"],
-    "run_at": "document_end"
+    "run_at": "document_start"
   }]
 }
