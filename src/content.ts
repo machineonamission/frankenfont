@@ -22,16 +22,20 @@ let config: {
     "url_whitelist": ["*"],
     "url_blacklist": [],
     "font-options": {
-        "serif": "Atkinson Hyperlegible Next",
-        "sans-serif": "Atkinson Hyperlegible Next",
-        "monospace": "Atkinson Hyperlegible Mono",
-        "fantasy": "Atkinson Hyperlegible Next",
-        "cursive": "Atkinson Hyperlegible Next"
+        // "serif": "Atkinson Hyperlegible Next",
+        // "sans-serif": "Atkinson Hyperlegible Next",
+        // "monospace": "Atkinson Hyperlegible Mono",
+        // "fantasy": "Atkinson Hyperlegible Next",
+        // "cursive": "Atkinson Hyperlegible Next"
+        "serif": "Comic Sans MS",
+        "sans-serif": "Comic Sans MS",
+        "monospace": "Comic Sans MS",
+        "fantasy": "Comic Sans MS",
+        "cursive": "Comic Sans MS",
     },
     "replace_unknown_fonts": false,
     "mode": "js", // css, js, off
 }
-
 
 if (config.mode === "css") {
     // TODO
@@ -43,7 +47,8 @@ if (config.mode === "css") {
         "cursive": ["cursive", "brush script mt"],
         "fantasy": ["fantasy"],
         "monospace": ["monospace", "ui-monospace", "courier", "courier new"],
-        "none": ["emoji", "math"]
+        "none": ["emoji", "math"],
+        "unidentified": []
     }
     // reverse the mapping to get a font family to type mapping
     let font_mapping: { [key: string]: string } = {}
@@ -77,7 +82,7 @@ if (config.mode === "css") {
                 return font_mapping[font];
             }
         }
-        return "none"
+        return "unidentified"
     }
 
     function get_computed_style(selector: string, property: string): string | null {
@@ -112,16 +117,21 @@ if (config.mode === "css") {
             // if it has vars, we need to compute those
             if (font.includes("var(")) {
                 // try to compute it
-                font = get_computed_style(rule.selectorText, "font");
+                font = get_computed_style(rule.selectorText, "font-family");
                 if (!font) {
                     // we couldn't compute it, its likely the element doesnt exist yet.
                     // push it to the deferred list
                     deferred_computed_styles.push(rule);
                     return
+                } else {
+                    // if we could compute it, parse out the families
+                    fonts = parseFontFamily(font);
                 }
+            } else {
+                // parse out the families from the font
+                fonts = parseFont(font)["font-family"];
             }
-            // parse out the families from the font
-            fonts = parseFont(font)["font-family"];
+
         }
         // handle font-family tags
         let font_family = style["font-family" as keyof typeof style] as string | null;
@@ -223,7 +233,7 @@ if (config.mode === "css") {
             }
         }
     }
-
+    
 
     // for all document changes
     const observer = new MutationObserver(mutations => {
@@ -231,20 +241,18 @@ if (config.mode === "css") {
             for (const node of mutation.addedNodes) {
                 if (node instanceof HTMLElement) {
 
-                    if (node instanceof HTMLStyleElement) {
-                        // if the node is just a style tag, we can directly access the css rules always
-                        handle_sheet(node.sheet)
-                    } else if (node instanceof HTMLLinkElement && node.rel === "stylesheet") {
-                        // if the node is a link tag, we need to wait for it to load
+                    if (node instanceof HTMLStyleElement || (node instanceof HTMLLinkElement && node.rel === "stylesheet")) {
+                        // wait for styles to load, then handle it
                         node.addEventListener("load", () => {
                             handle_sheet(node.sheet);
+                            // force_check_all_deferred_rules()
                         });
                     } else {
                         // for any normal element added, check if any of the deferred computed styles are now able to
                         // be evaluated, then evaluate them
                         deferred_computed_styles = deferred_computed_styles.filter(value => {
-                            if (node.querySelector(value.selectorText)) {
-                                handle_direct_declarations(value as CSSStyleRule);
+                            if (node.matches(value.selectorText) || node.querySelector(value.selectorText)) {
+                                handle_direct_declarations(value);
                                 return false;
                             }
                             return true;
