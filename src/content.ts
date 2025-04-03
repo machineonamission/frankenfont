@@ -1,5 +1,9 @@
-declare function parseFontFamily(name: string): string[];
+// TODO: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof
+//  the fucking try it editor, with constructed stylesheet, is not workig
 
+
+// parser.js
+declare function parseFontFamily(name: string): string[];
 declare function parseFont(name: string): {
     'font-family': string[]
     'font-size': string
