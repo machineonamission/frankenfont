@@ -40,14 +40,18 @@ let config: {
 if (config.mode === "css") {
     // TODO
 } else if (config.mode === "js") {
+    // listen for serialized rules intercepted in the injected script, and handle them
     type serializable_rule = { font: string | null, font_family: string | null, selector: string };
     document.addEventListener("cssRuleIntercepted", (event) => {
         explicit_handle_declarations((event as CustomEvent).detail as serializable_rule);
     });
-// content.js
+
+    // inject the aforementioned script to listen for rules
     const script = document.createElement('script');
     script.src = chrome.runtime.getURL('inject.js');
     (document.head || document.documentElement).appendChild(script);
+
+
     // hardcoded map of font types to font families
     const reverse_font_mapping: { [key: string]: string[] } = {
         "serif": ["serif", "ui-sans-serif", "system-ui", "ui-rounded", "arial", "verdana", "tahoma", "trebuchet ms"],
@@ -116,6 +120,9 @@ if (config.mode === "css") {
     }
 
     function explicit_handle_declarations(rule: serializable_rule) {
+        // given a serialized rule, compute and apply the styles
+        // we can't operate on the rule directly
+        // because rules passed via intercepted insertRule calls must be serialized
         let {font, font_family, selector} = rule;
         let fonts: string[] = [];
         // handle font tags
@@ -174,6 +181,7 @@ if (config.mode === "css") {
     }
 
     function handle_direct_declarations(rule: CSSStyleRule) {
+        // "serialize" the rule, then handle it
         let style = rule.style;
         let font = style["font" as keyof typeof style] as string | null;
         let font_family = style["font-family" as keyof typeof style] as string | null;
@@ -252,7 +260,7 @@ if (config.mode === "css") {
     }
 
     // for all document changes
-    const observer = new MutationObserver(mutations => {
+    new MutationObserver(mutations => {
         for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
                 if (node instanceof HTMLElement) {
@@ -277,10 +285,7 @@ if (config.mode === "css") {
                 }
             }
         }
-    });
-
-    // watch the document for changes
-    observer.observe(document, {childList: true, subtree: true});
+    }).observe(document, {childList: true, subtree: true});
     // run any stylesheets we didn't catch
     for (let sheet of document.styleSheets) {
         handle_sheet(sheet)
