@@ -32,33 +32,46 @@ let config: {
     "mode": "js", // css, js, off
 }
 
-const reverse_font_mapping: { [key: string]: string[] } = {
-    "serif": ["serif", "ui-sans-serif", "system-ui", "ui-rounded", "arial", "verdana", "tahoma", "trebuchet ms"],
-    "sans-serif": ["sans-serif", "ui-sans-serif", "times new roman", "georgia", "garamond"],
-    "cursive": ["cursive", "brush script mt"],
-    "fantasy": ["fantasy"],
-    "monospace": ["monospace", "ui-monospace", "courier", "courier new"],
-    "none": ["emoji", "math"]
-}
-let font_mapping: { [key: string]: string } = {}
-for (let key in reverse_font_mapping) {
-    for (let value of reverse_font_mapping[key]) {
-        font_mapping[value] = key;
-    }
-}
-
-const css_noops = [
-    "inherit",
-    "initial",
-    "revert",
-    "revert-layer",
-    "unset"
-]
 
 if (config.mode === "css") {
     // TODO
 } else if (config.mode === "js") {
+    // hardcoded map of font types to font families
+    const reverse_font_mapping: { [key: string]: string[] } = {
+        "serif": ["serif", "ui-sans-serif", "system-ui", "ui-rounded", "arial", "verdana", "tahoma", "trebuchet ms"],
+        "sans-serif": ["sans-serif", "ui-sans-serif", "times new roman", "georgia", "garamond"],
+        "cursive": ["cursive", "brush script mt"],
+        "fantasy": ["fantasy"],
+        "monospace": ["monospace", "ui-monospace", "courier", "courier new"],
+        "none": ["emoji", "math"]
+    }
+    // reverse the mapping to get a font family to type mapping
+    let font_mapping: { [key: string]: string } = {}
+    for (let key in reverse_font_mapping) {
+        for (let value of reverse_font_mapping[key]) {
+            font_mapping[value] = key;
+        }
+    }
+
+    // css props that we can safely ignore
+    const css_noops = [
+        "inherit",
+        "initial",
+        "revert",
+        "revert-layer",
+        "unset"
+    ]
+    // list of css styles that are fonts, and do apply to elements, but have var()s and the element doesn't exist,
+    // so the vars cant be computed
+    // these are monitored in a mutation observer until the element exists, then the vars are computed
+    let deferred_computed_styles: CSSStyleRule[] = []
+
+    // override styles thing
+    let override_styles = new CSSStyleSheet();
+    document.adoptedStyleSheets.push(override_styles);
+
     function get_font_type(fonts: string[]): keyof typeof reverse_font_mapping {
+        // go in order of the font declarations until we find one we recognize, then return the type
         for (let font of fonts) {
             if (font_mapping[font]) {
                 return font_mapping[font];
@@ -69,10 +82,19 @@ if (config.mode === "css") {
 
     function get_computed_style(selector: string, property: string): string | null {
         try {
-            let doc = document.querySelector(selector);
-            if (!doc) {
+            let doc;
+            if (selector === ":root") {
+                // this is a special case for the root element
                 doc = document.documentElement;
+            } else {
+                // try to find the element
+                doc = document.querySelector(selector);
+                if (!doc) {
+                    // if the element isnt found, handle_direct_declarations will defer it for us
+                    return null;
+                }
             }
+            // resolve the vars
             return window.getComputedStyle(doc).getPropertyValue(property);
         } catch (e) {
             console.error("Error getting computed style", e);
@@ -80,98 +102,84 @@ if (config.mode === "css") {
         }
     }
 
-    function handle_direct_declarations(rule: CSSStyleRule, override_styles: CSSStyleSheet) {
+    function handle_direct_declarations(rule: CSSStyleRule) {
         let style = rule.style;
-        let font = style["font" as keyof typeof style] as string | null;
         let fonts: string[] = [];
+        // handle font tags
+        let font = style["font" as keyof typeof style] as string | null;
+        // if element has actual font tag
         if (font && !css_noops.includes(font)) {
-            if(font.includes("var(")) {
-                font = get_computed_style(rule.selectorText, "font") || font;
+            // if it has vars, we need to compute those
+            if (font.includes("var(")) {
+                // try to compute it
+                font = get_computed_style(rule.selectorText, "font");
+                if (!font) {
+                    // we couldn't compute it, its likely the element doesnt exist yet.
+                    // push it to the deferred list
+                    deferred_computed_styles.push(rule);
+                    return
+                }
             }
+            // parse out the families from the font
             fonts = parseFont(font)["font-family"];
         }
+        // handle font-family tags
         let font_family = style["font-family" as keyof typeof style] as string | null;
         if (font_family && !css_noops.includes(font_family)) {
-            if(font_family.includes("var(")) {
-                font_family = get_computed_style(rule.selectorText, "font-family") || font_family;
+            // compute or defer vars
+            if (font_family.includes("var(")) {
+                font_family = get_computed_style(rule.selectorText, "font-family");
+                if (!font_family) {
+                    deferred_computed_styles.push(rule);
+                    return
+                }
             }
+            // parse out families
             fonts = parseFontFamily(font_family);
         }
+        // if this element has font declarations
         if (fonts) {
+            // get the predicted font type
             let fonttype = get_font_type(fonts);
             if (fonttype !== "none") {
+                // if the font has a type
+                // get config font
                 let new_font = config["font-options"][fonttype as keyof typeof config["font-options"]];
-                fonts.unshift(new_font)
-                let new_font_family = fonts.map(f => `"${f}"`).join(", ");
                 if (new_font) {
+                    // push the new font to the front of the list
+                    fonts.unshift(new_font)
+                    // convert to css list
+                    let new_font_family = fonts.map(f => `"${f}"`).join(", ");
+                    // add style to override font
                     override_styles.insertRule(`${rule.selectorText} { font-family: ${new_font_family} !important; }`);
                 }
             }
         }
     }
 
-    function handle_variables(rule: CSSStyleRule, override_styles: CSSStyleSheet) {
-        for (const style of rule.style) {
-            if (style.startsWith("--")) {
-                try {
-                    let original_value = rule.style.getPropertyValue(style);
-                    if (original_value.includes("var(")) {
-                        try {
-                            let doc: Element;
-                            if (rule.selectorText.startsWith(":")) {
-                                doc = document.documentElement;
-                            } else {
-                                doc = document.querySelector(rule.selectorText) as Element;
-                            }
-                            original_value = window.getComputedStyle(doc).getPropertyValue(style);
-                        } catch (e) {
-                            console.error("Error getting computed style", e);
-                        }
-                    }
-                    let fonts: string[] | null = null;
-                    let parsed = parseFont(original_value);
-                    if (parsed) {
-                        fonts = parsed["font-family"];
-                    } else {
-                        fonts = parseFontFamily(original_value);
-                    }
-                    if (fonts) {
-                        let fonttype = get_font_type(fonts);
-                        if (fonttype !== "none") {
-                            let new_font = config["font-options"][fonttype as keyof typeof config["font-options"]];
-                            fonts.unshift(new_font)
-                            let new_font_family = fonts.map(f => `"${f}"`).join(", ");
-                            if (new_font) {
-                                override_styles.insertRule(`${rule.selectorText} { ${style}: ${new_font_family} !important; }`);
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error handling css variable", e);
-                }
-            }
-        }
-    }
-
     function handle_css(rules: CSSRuleList) {
-        let override_styles = new CSSStyleSheet();
         // for all css declarations in the sheet
         for (let rule of rules) {
-            // for all normal rules
+
             if (rule instanceof CSSStyleRule) {
+                // for all normal rules, handle with error handling
                 try {
-                    handle_direct_declarations(rule, override_styles);
+                    handle_direct_declarations(rule);
                     // handle_variables(rule, override_styles);
                 } catch (e) {
                     console.error("Error handling css rule", e);
                 }
-
+            } else if (rule instanceof CSSGroupingRule) {
+                // unwrap grouping rules, shouldnt matter if theyre media queries or whatever cause all fonts are
+                // replaced
+                handle_css(rule.cssRules);
             }
         }
-        document.adoptedStyleSheets.push(override_styles);
+
     }
 
     function parse_css(text: string) {
+        // insert css text into a stylesheet to evaluate it, then handle it
         const sheet = new CSSStyleSheet();
         sheet.replace(text)
             .then(() => {
@@ -182,65 +190,76 @@ if (config.mode === "css") {
             });
     }
 
-    function handle_link(node: HTMLLinkElement) {
+    function handle_sheet(sheet: CSSStyleSheet | null) {
+        if (!sheet) {
+            return
+        }
         let rules: CSSRuleList | null = null;
-        node.addEventListener("load", () => {
-            try {
-                if (node.sheet) {
-                    rules = node.sheet.cssRules;
-                }
-            } catch (e) {
-                if ((e as DOMException).name === "SecurityError") {
-                    chrome.runtime.sendMessage(node.href, (r: { "status": "ok", "text": string }
-                        | { "status": "error", "error": string }
-                    ) => {
-                        if (r.status === "ok") {
-                            parse_css(r.text)
-                        } else {
-                            console.error("Error fetching css file", r.error);
-                        }
-                    });
-                } else {
-                    console.error("Unknown Error at accessing cssRules", e);
-                }
-            } finally {
-                if (rules) {
-                    handle_css(rules);
-                }
+        try {
+            // try to access the css rules
+            rules = sheet.cssRules;
+        } catch (e) {
+            if ((e as DOMException).name === "SecurityError") {
+                // if we get a security error, it means the css has CORS restrictions, so we need to ask the background
+                // worker to fetch it for us
+                chrome.runtime.sendMessage(sheet.href, (r: { "status": "ok", "text": string }
+                    | { "status": "error", "error": string }
+                ) => {
+                    if (r.status === "ok") {
+                        parse_css(r.text)
+                        return
+                    } else {
+                        console.error("Error fetching css file", r.error);
+                    }
+                });
+            } else {
+                // some other fuckass error
+                console.error("Unknown Error at accessing cssRules", e);
             }
-        });
+        } finally {
+            // if the rules successfully evaluated, no CORS bs, we can just handle it
+            if (rules) {
+                handle_css(rules);
+            }
+        }
     }
 
-    // Set up a MutationObserver to watch for added nodes (in document.head and optionally elsewhere)
+
+    // for all document changes
     const observer = new MutationObserver(mutations => {
         for (const mutation of mutations) {
             for (const node of mutation.addedNodes) {
                 if (node instanceof HTMLElement) {
+
                     if (node instanceof HTMLStyleElement) {
-                        if (node.sheet) {
-                            handle_css(node.sheet.cssRules)
-                        }
+                        // if the node is just a style tag, we can directly access the css rules always
+                        handle_sheet(node.sheet)
                     } else if (node instanceof HTMLLinkElement && node.rel === "stylesheet") {
-                        handle_link(node);
+                        // if the node is a link tag, we need to wait for it to load
+                        node.addEventListener("load", () => {
+                            handle_sheet(node.sheet);
+                        });
+                    } else {
+                        // for any normal element added, check if any of the deferred computed styles are now able to
+                        // be evaluated, then evaluate them
+                        deferred_computed_styles = deferred_computed_styles.filter(value => {
+                            if (node.querySelector(value.selectorText)) {
+                                handle_direct_declarations(value as CSSStyleRule);
+                                return false;
+                            }
+                            return true;
+                        })
                     }
                 }
             }
         }
     });
 
+    // watch the document for changes
     observer.observe(document, {childList: true, subtree: true});
-    // for all stylesheets
+    // run any stylesheets we didn't catch
     for (let sheet of document.styleSheets) {
-        try {
-            (sheet.ownerNode as Element).setAttribute("crossorigin", "anonymous");
-            if (sheet.cssRules) {
-
-            }
-        } catch (SecurityError) {
-            // nothing
-            console.error("SecurityError")
-            debugger
-        }
+        handle_sheet(sheet)
     }
 }
 
