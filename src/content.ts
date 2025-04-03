@@ -22,16 +22,16 @@ let config: {
     "url_whitelist": ["*"],
     "url_blacklist": [],
     "font-options": {
-        // "serif": "Atkinson Hyperlegible Next",
-        // "sans-serif": "Atkinson Hyperlegible Next",
-        // "monospace": "Atkinson Hyperlegible Mono",
-        // "fantasy": "Atkinson Hyperlegible Next",
-        // "cursive": "Atkinson Hyperlegible Next"
-        "serif": "Comic Sans MS",
-        "sans-serif": "Comic Sans MS",
-        "monospace": "Comic Sans MS",
-        "fantasy": "Comic Sans MS",
-        "cursive": "Comic Sans MS",
+        "serif": "Atkinson Hyperlegible Next",
+        "sans-serif": "Atkinson Hyperlegible Next",
+        "monospace": "Atkinson Hyperlegible Mono",
+        "fantasy": "Atkinson Hyperlegible Next",
+        "cursive": "Atkinson Hyperlegible Next"
+        // "serif": "Comic Sans MS",
+        // "sans-serif": "Comic Sans MS",
+        // "monospace": "Comic Sans MS",
+        // "fantasy": "Comic Sans MS",
+        // "cursive": "Comic Sans MS",
     },
     "replace_unknown_fonts": false,
     "mode": "js", // css, js, off
@@ -40,6 +40,14 @@ let config: {
 if (config.mode === "css") {
     // TODO
 } else if (config.mode === "js") {
+    type serializable_rule = { font: string | null, font_family: string | null, selector: string };
+    document.addEventListener("cssRuleIntercepted", (event) => {
+        explicit_handle_declarations((event as CustomEvent).detail as serializable_rule);
+    });
+// content.js
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('inject.js');
+    (document.head || document.documentElement).appendChild(script);
     // hardcoded map of font types to font families
     const reverse_font_mapping: { [key: string]: string[] } = {
         "serif": ["serif", "ui-sans-serif", "system-ui", "ui-rounded", "arial", "verdana", "tahoma", "trebuchet ms"],
@@ -69,7 +77,7 @@ if (config.mode === "css") {
     // list of css styles that are fonts, and do apply to elements, but have var()s and the element doesn't exist,
     // so the vars cant be computed
     // these are monitored in a mutation observer until the element exists, then the vars are computed
-    let deferred_computed_styles: CSSStyleRule[] = []
+    let deferred_computed_styles: serializable_rule[] = []
 
     // override styles thing
     let override_styles = new CSSStyleSheet();
@@ -107,17 +115,16 @@ if (config.mode === "css") {
         }
     }
 
-    function handle_direct_declarations(rule: CSSStyleRule) {
-        let style = rule.style;
+    function explicit_handle_declarations(rule: serializable_rule) {
+        let {font, font_family, selector} = rule;
         let fonts: string[] = [];
         // handle font tags
-        let font = style["font" as keyof typeof style] as string | null;
         // if element has actual font tag
         if (font && !css_noops.includes(font)) {
             // if it has vars, we need to compute those
             if (font.includes("var(")) {
                 // try to compute it
-                font = get_computed_style(rule.selectorText, "font-family");
+                font = get_computed_style(selector, "font-family");
                 if (!font) {
                     // we couldn't compute it, its likely the element doesnt exist yet.
                     // push it to the deferred list
@@ -134,11 +141,10 @@ if (config.mode === "css") {
 
         }
         // handle font-family tags
-        let font_family = style["font-family" as keyof typeof style] as string | null;
         if (font_family && !css_noops.includes(font_family)) {
             // compute or defer vars
             if (font_family.includes("var(")) {
-                font_family = get_computed_style(rule.selectorText, "font-family");
+                font_family = get_computed_style(selector, "font-family");
                 if (!font_family) {
                     deferred_computed_styles.push(rule);
                     return
@@ -161,10 +167,21 @@ if (config.mode === "css") {
                     // convert to css list
                     let new_font_family = fonts.map(f => `"${f}"`).join(", ");
                     // add style to override font
-                    override_styles.insertRule(`${rule.selectorText} { font-family: ${new_font_family} !important; }`);
+                    override_styles.insertRule(`${selector} { font-family: ${new_font_family} !important; }`);
                 }
             }
         }
+    }
+
+    function handle_direct_declarations(rule: CSSStyleRule) {
+        let style = rule.style;
+        let font = style["font" as keyof typeof style] as string | null;
+        let font_family = style["font-family" as keyof typeof style] as string | null;
+        explicit_handle_declarations({
+            font: font,
+            font_family: font_family,
+            selector: rule.selectorText
+        })
     }
 
     function handle_css(rules: CSSRuleList) {
@@ -233,7 +250,6 @@ if (config.mode === "css") {
             }
         }
     }
-    
 
     // for all document changes
     const observer = new MutationObserver(mutations => {
@@ -251,8 +267,8 @@ if (config.mode === "css") {
                         // for any normal element added, check if any of the deferred computed styles are now able to
                         // be evaluated, then evaluate them
                         deferred_computed_styles = deferred_computed_styles.filter(value => {
-                            if (node.matches(value.selectorText) || node.querySelector(value.selectorText)) {
-                                handle_direct_declarations(value);
+                            if (node.matches(value.selector) || node.querySelector(value.selector)) {
+                                explicit_handle_declarations(value);
                                 return false;
                             }
                             return true;
