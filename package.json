@@ -1,16 +1,18 @@
 {
-  "name": "font-replacer-extension",
+  "name": "frankenfont",
   "version": "0.0.1",
-  "description": "smartly and aggressively replaces fonts across all websites",
+  "description": "Smartly, efficiently, aggressively, and customizably replaces fonts across all websites.",
   "license": "GPL-3.0",
   "author": "Machine on a Mission",
   "devDependencies": {
+    "@types/chrome": "^0.0.313",
     "copyfiles": "^2.4.1",
     "typescript": "^5.8.2",
-    "@types/chrome": "^0.0.313"
+    "watch": "^1.0.2"
   },
   "scripts": {
-    "build": "tsc && copyfiles -u 1 -e \"**/*.ts\" \"src/**/*\" dist"
+    "build": "tsc && copyfiles -u 1 -e \"**/*.ts\" \"src/**/*\" dist",
+    "watch": "watch \"npm run build\" ./src"
   },
   "dependencies": {
     "css-font-parser": "^2.0.1"

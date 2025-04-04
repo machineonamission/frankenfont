@@ -1,0 +1,9 @@
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6, p, #logo {
+    margin-bottom: 0.25rem;
+}
+
+#logo {
+    height: calc((1.625rem + 4.5vw) * 1.5);
+    margin: 0.75rem auto;
+    display: block;
+}

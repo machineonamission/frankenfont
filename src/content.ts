@@ -21,7 +21,7 @@ let config: {
         cursive: string
     },
     replace_unknown_fonts: boolean,
-    mode: "css" | "js" | "off",
+    mode: "css" | "js" | "off" | "noremotefonts",
 } = {
     "url_whitelist": ["*"],
     "url_blacklist": [],
@@ -38,11 +38,14 @@ let config: {
         // "cursive": "Comic Sans MS",
     },
     "replace_unknown_fonts": false,
-    "mode": "js", // css, js, off
+    "mode": "js", // css, js, noremotefonts, off
 }
 
 if (config.mode === "css") {
     // TODO
+} else if (config.mode === "noremotefonts") {
+    // TODO
+    //  add a "Content-Security-Policy: font-src *" header to fonts
 } else if (config.mode === "js") {
     // listen for serialized rules intercepted in the injected script, and handle them
     type serializable_rule = { font: string | null, font_family: string | null, selector: string };
