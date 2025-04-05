@@ -1,31 +1,138 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>𝒇𝑟𝑎𝑛𝑘𝑒𝑛𝑓𝑜𝑛𝑡 options</title>
 
     <link rel="stylesheet" href="../libs/bootstrap/bootstrap.min.css">
+    <link rel="stylesheet" href="../libs/bootstrap/ahlpatch.css">
     <link rel="stylesheet" href="index.css">
 
-    <title>𝒇𝑟𝑎𝑛𝑘𝑒𝑛𝑓𝑜𝑛𝑡 options</title>
+    <script src="../libs/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="../libs/fontawesome/solid.js"></script>
+    <script src="../libs/fontawesome/brands.js"></script>
+    <script src="../libs/fontawesome/fontawesome.js"></script>
+    <script src="../../config.js"></script>
+    <script src="index.js"></script>
 </head>
 <body>
 <div class="container">
     <img src="../../assets/frankenfont full white.svg" alt="frankenfont" id="logo">
-    <h1 class="fw-bolder text-center">Options</h1>
-    <div class="modal-body d-grid" style="gap:0.75rem">
+    <h1 class="fw-bolder text-center mb-3">Options</h1>
+    <div class="modal-body d-grid" style="gap: 0.75rem">
+        <div class="d-grid">
+            <button class="btn btn-success" type="button" id="save">Save Changes</button>
+            <p id="save-name" class="text-center text-success"></p>
+        </div>
         <div>
-            <p><i class="fa-solid fa-globe"></i> Internationalization:</p>
-            <div class="ms-4 d-grid gap-2">
+            <div class="form-check form-switch fs-2 fw-bold ms-auto">
+                <input class="form-check-input" type="checkbox" role="switch" id="enable">
+                <label class="form-check-label" for="enable">Enable Extension</label>
             </div>
         </div>
-    </div>
+        <fieldset>
+            <legend><i class="fa-solid fa-globe"></i> Font:</legend>
+            <div class="ms-4 d-grid gap-2">
+                <div class="css-font">
+                    <label for="normal-font-name">Normal font:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input class="form-check-input" type="checkbox" role="switch" id="normal-font-enable">
+                        </div>
+                        <input type="text" class="form-control" id="normal-font-name" placeholder="Normal font name">
+                    </div>
+                </div>
+                <div class="js-font">
+                    <label for="sans-serif-font-name">Sans-serif font:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input class="form-check-input" type="checkbox" role="switch" id="sans-serif-font-enable">
+                        </div>
+                        <input type="text" class="form-control" id="sans-serif-font-name" placeholder="Sans-serif font name">
+                    </div>
+                </div>
+                <div class="js-font">
+                    <label for="serif-font-name">Serif font:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input class="form-check-input" type="checkbox" role="switch" id="serif-font-enable">
+                        </div>
+                        <input type="text" class="form-control" id="serif-font-name" placeholder="Serif font name">
+                    </div>
+                </div>
+                <div>
+                    <label for="monospace-font-name">Monospace font:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input class="form-check-input" type="checkbox" role="switch" id="monospace-font-enable">
+                        </div>
+                        <input type="text" class="form-control" id="monospace-font-name" placeholder="Monospace font name">
+                    </div>
+                </div>
+                <div class="advanced-font">
+                    <label for="fantasy-font-name">Fantasy font:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input class="form-check-input" type="checkbox" role="switch" id="fantasy-font-enable">
+                        </div>
+                        <input type="text" class="form-control" id="fantasy-font-name" placeholder="Fantasy font name">
+                    </div>
+                </div>
+                <div class="advanced-font">
+                    <label for="cursive-font-name">Cursive font:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input class="form-check-input" type="checkbox" role="switch" id="cursive-font-enable">
+                        </div>
+                        <input type="text" class="form-control" id="cursive-font-name" placeholder="Cursive font name">
+                    </div>
+                </div>
+                <div class="advanced-font">
+                    <label for="math-font-name">Math font:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input class="form-check-input" type="checkbox" role="switch" id="math-font-enable">
+                        </div>
+                        <input type="text" class="form-control" id="math-font-name" placeholder="Math font name">
+                    </div>
+                </div>
+                <div class="js-font">
+                    <label for="unknown-font-name">Unknown font:</label>
+                    <div class="input-group">
+                        <div class="input-group-text">
+                            <input class="form-check-input" type="checkbox" role="switch" id="unknown-font-enable">
+                        </div>
+                        <input type="text" class="form-control" id="unknown-font-name" placeholder="Unknown font name">
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend><i class="fa-solid fa-globe"></i> Website:</legend>
+            <div class="ms-4 d-grid gap-2">
+                <div>
+
+                </div>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend><i class="fa-solid fa-globe"></i> Font Replacer Engine:</legend>
+            <div class="ms-4 d-grid gap-2">
+                <div>
+
+                </div>
+            </div>
+        </fieldset>
+        <fieldset>
+            <legend><i class="fa-solid fa-globe"></i> JS Engine Options:</legend>
+            <div class="ms-4 d-grid gap-2">
+                <div>
+
+                </div>
+            </div>
+        </fieldset>
 </div>
 </body>
-<script src="../libs/bootstrap/bootstrap.bundle.min.js"></script>
-<script src="../libs/fontawesome/solid.js"></script>
-<script src="../libs/fontawesome/brands.js"></script>
-<script src="../libs/fontawesome/fontawesome.js"></script>
-<script src="index.js"></script>
 </html>

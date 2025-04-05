@@ -5,7 +5,6 @@
     const originalAddRule = CSSStyleSheet.prototype.addRule;
     const originalReplace = CSSStyleSheet.prototype.replace;
     const originalReplaceSync = CSSStyleSheet.prototype.replaceSync;
-    type serializable_rule = { font: string | null, font_family: string | null, selector: string };
 
     // Helper function: dispatch a custom event with method name, arguments, and result.
     function add_event(rule: serializable_rule) {

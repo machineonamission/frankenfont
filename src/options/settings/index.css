@@ -3,7 +3,12 @@
 }
 
 #logo {
-    height: calc((1.625rem + 4.5vw) * 1.5);
-    margin: 0.75rem auto;
+    height: 7rem;
+    margin: 0.75rem auto 0;
     display: block;
+}
+
+.form-control, .form-control:focus {
+    background: var(--bs-secondary);
+    color: #ccc;
 }
