@@ -6,6 +6,7 @@ type font_option = {
 type config_type = {
     enabled: boolean,
     url_mode: "whitelist" | "blacklist",
+    specificity: "one" | "minimal" | "standard" | "advanced",
     url_whitelist: string[],
     url_blacklist: string[],
     "font-options": {
@@ -24,6 +25,7 @@ type config_type = {
 const default_config: config_type = {
     enabled: true,
     url_mode: "blacklist",
+    specificity: "standard",
     url_whitelist: [],
     url_blacklist: [],
     "font-options": {

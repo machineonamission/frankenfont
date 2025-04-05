@@ -11,6 +11,9 @@ declare function parseFont(name: string): {
 };
 
 get_config().then(config => {
+    if (!config.enabled) {
+        return;
+    }
     if (config.mode === "css") {
         // TODO
     } else if (config.mode === "noremotefonts") {
@@ -145,7 +148,7 @@ get_config().then(config => {
                 if (fonttype !== "none") {
                     // if the font has a type
                     // check if config says to replace this type of font
-                    const this_font_config = config["font-options"][fonttype as keyof typeof config["font-options"]];
+                    const this_font_config = config["font-options"][fonttype as keyof config_type["font-options"]];
                     if (this_font_config["enabled"]
                         // edge case: existing font matches user font, no need to override style
                         && this_font_config["name"] !== fonts[0]) {
