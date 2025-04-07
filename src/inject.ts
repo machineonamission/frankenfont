@@ -66,5 +66,26 @@
         handle_sheet(this.cssRules)
     };
 
-    console.log("CSSStyleSheet methods have been overridden.");
+    // console.log("CSSStyleSheet methods have been overridden.");
+    // Save the original descriptor so you can call the real setter/getter later
+    const originalDescriptor = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'font')!;
+
+    // Define a new property descriptor
+    Object.defineProperty(CanvasRenderingContext2D.prototype, 'font', {
+        get: function() {
+            console.log('Custom font getter called with:');
+            return originalDescriptor.get!.call(this);
+        },
+        set: function(value) {
+            console.log('Custom font setter called with:', value);
+
+            // You can modify the value here if you want
+            // const newValue = value + ' /* intercepted */';
+
+            // Call the original setter
+            originalDescriptor.set!.call(this, value);
+        },
+        configurable: true,
+        enumerable: true
+    });
 })();

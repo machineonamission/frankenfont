@@ -25,12 +25,6 @@ get_config().then(config => {
             explicit_handle_declarations((event as CustomEvent).detail as serializable_rule);
         });
 
-        // inject the aforementioned script to listen for rules
-        const script = document.createElement('script');
-        script.src = chrome.runtime.getURL('inject.js');
-        (document.head || document.documentElement).appendChild(script);
-
-
         // hardcoded map of font types to font families
         const reverse_font_mapping: { [key: string]: string[] } = {
             "serif": ["serif", "ui-sans-serif", "system-ui", "ui-rounded", "arial", "verdana", "tahoma", "trebuchet ms"],

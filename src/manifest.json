@@ -17,7 +17,7 @@
     "default_title": "frankenfont",
     "default_popup": "options/popup/index.html"
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "scripting"],
   "host_permissions": [
     "*://*/*"
   ],
@@ -29,9 +29,15 @@
     "js": ["parser.js", "config.js", "content.js"],
     "matches": ["<all_urls>"],
     "run_at": "document_start",
-    "all_frames": true,
-    "type": "module"
-  }],
+    "all_frames": true
+  },
+    {
+      "js": ["inject.js"],
+      "matches": ["<all_urls>"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }],
   "web_accessible_resources": [
     {
       "resources": ["inject.js"],
