@@ -1,5 +1,4 @@
 {
-  // Comments are accepted in the manifest, even though it is JSON.
   "$schema": "https://json.schemastore.org/chrome-manifest.json",
   "manifest_version": 3,
   "name": "frankenfont",
@@ -17,31 +16,51 @@
     "default_title": "frankenfont",
     "default_popup": "options/popup/index.html"
   },
-  "permissions": ["storage", "scripting"],
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "*://*/*"
   ],
   "background": {
-    "service_worker": "cors.js",
-    "type": "module"
+    "service_worker": "extension_scripts/cors.js"
   },
-  "content_scripts": [{
-    "js": ["parser.js", "config.js", "content.js"],
-    "matches": ["<all_urls>"],
-    "run_at": "document_start",
-    "all_frames": true
-  },
+  "content_scripts": [
     {
-      "js": ["inject.js"],
-      "matches": ["<all_urls>"],
+      "js": [
+        "extension_scripts/config.js",
+        "extension_scripts/content.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "js": [
+        "extension_scripts/content_world_main/world_main_type.js",
+        "extension_scripts/content_world_main/receive_config.js",
+        "extension_scripts/content_world_main/override_prototypes.js",
+        "extension_scripts/content_world_main/engine_js.js",
+        "extension_scripts/content_world_main/multiplexer.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ],
       "run_at": "document_start",
       "all_frames": true,
       "world": "MAIN"
-    }],
+    }
+  ],
   "web_accessible_resources": [
     {
-      "resources": ["inject.js"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "inject.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ]
 }
