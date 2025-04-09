@@ -52,6 +52,7 @@ declare function parseFont(name: string): {
     } = {}
 
     function cors(url: string): Promise<string> {
+        console.log("cors", url)
         return new Promise<string>((resolve, reject) => {
             const id = crypto.randomUUID()
             cors_waiting[id] = {"resolve": resolve, "reject": reject};
@@ -60,7 +61,7 @@ declare function parseFont(name: string): {
     }
 
     // listen for serialized rules intercepted in the injected script, and handle them
-    document.addEventListener("frankenfont-cors-receive", (event) => {
+    window.addEventListener("frankenfont-cors-receive", (event) => {
         const resp = (event as CustomEvent).detail as cors_response;
         const {id, status} = resp;
         if (status === "ok") {
@@ -115,6 +116,27 @@ declare function parseFont(name: string): {
         }
     }
 
+    function compute_vars(selector: string, full_property: string): string | null {
+        let error: boolean = false;
+        let out: string = full_property.replace(/var\(([^), ]+)[^)]*\)/gi, ((match, m1) => {
+            if (error) {
+                return ""
+            }
+            const s = get_computed_style(selector, m1);
+            if (s === null) {
+                error = true;
+                return ""
+            } else {
+                return s
+            }
+        }));
+        if (error) {
+            return null;
+        } else {
+            return out;
+        }
+    }
+
     function explicit_handle_declarations(rule: serializable_rule) {
         // given a serialized rule, compute and apply the styles
         // we can't operate on the rule directly
@@ -127,15 +149,15 @@ declare function parseFont(name: string): {
             // if it has vars, we need to compute those
             if (font.includes("var(")) {
                 // try to compute it
-                font = get_computed_style(selector, "font-family");
+                font = compute_vars(selector, font);
                 if (!font) {
                     // we couldn't compute it, its likely the element doesnt exist yet.
                     // push it to the deferred list
                     deferred_computed_styles.push(rule);
                     return
                 } else {
-                    // if we could compute it, parse out the families
-                    fonts = parseFontFamily(font);
+                    // if we could compute it, parse
+                    fonts = parseFont(font)["font-family"];
                 }
             } else {
                 // parse out the families from the font
@@ -147,7 +169,7 @@ declare function parseFont(name: string): {
         if (font_family && !css_noops.includes(font_family)) {
             // compute or defer vars
             if (font_family.includes("var(")) {
-                font_family = get_computed_style(selector, "font-family");
+                font_family = compute_vars(selector, font_family);
                 if (!font_family) {
                     deferred_computed_styles.push(rule);
                     return

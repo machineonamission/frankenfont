@@ -5,16 +5,16 @@ let config: config_type | null = null;
 
 document.addEventListener("DOMContentLoaded", function (event) {
     docready = true;
-    waitforboth()
+    wait_for_both()
 });
 
 get_config().then(items => {
     config = items as config_type;
     storageready = true;
-    waitforboth()
+    wait_for_both()
 })
 
-function waitforboth() {
+function wait_for_both() {
     if (docready && storageready) {
         setup_config()
     }

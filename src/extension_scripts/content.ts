@@ -5,6 +5,7 @@ window.addEventListener("frankenfont-config-send", (e) => {
 });
 
 window.addEventListener("frankenfont-cors-send", (e) => {
+    console.log(e);
     const {id, url} = (e as CustomEvent).detail;
     chrome.runtime.sendMessage(url, (r: { "status": "ok", "text": string, "id"?: string }
         | { "status": "error", "error": string, "id"?: string }
