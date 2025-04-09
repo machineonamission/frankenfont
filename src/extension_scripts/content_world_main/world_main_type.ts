@@ -11,7 +11,9 @@ let FRANKENFONT: {
         replaceSync: typeof CSSStyleSheet.prototype.replaceSync | null,
         replace: typeof CSSStyleSheet.prototype.replace | null,
         font: PropertyDescriptor | null
-    }
+    },
+    override_prototypes: (() => void) | null,
+    restore_prototypes: (() => void) | null,
 } = {
     config: null,
     engine_js: null,
@@ -25,5 +27,7 @@ let FRANKENFONT: {
         replaceSync: null,
         replace: null,
         font: null
-    }
+    },
+    override_prototypes: null,
+    restore_prototypes: null,
 }

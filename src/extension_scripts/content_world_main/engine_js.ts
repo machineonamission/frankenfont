@@ -12,7 +12,7 @@ declare function parseFont(name: string): {
 
 (function () {
     if (!FRANKENFONT.config || FRANKENFONT.config.mode === "js") {
-        override_prototypes();
+        FRANKENFONT.override_prototypes!();
     }
     // hardcoded map of font types to font families
     const reverse_font_mapping: { [key: string]: string[] } = {

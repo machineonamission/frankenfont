@@ -36,7 +36,7 @@ function setup_config() {
     // save
     id("save").addEventListener("click", () => {
         chrome.storage.sync.set(config!).then(() => {
-            id("save-name").innerText = "Saved!";
+            id("save-name").innerText = "Saved! Reload any open pages to see changes.";
         })
     })
     // font selection
