@@ -14,6 +14,7 @@ function disable_font(config: config_type, in_fonts: string[]) {
 }
 
 function expand_font_options(config: config_type): config_type {
+    // expands out the compact low-specificity config into the full mapping for each font
     switch (config.specificity) {
         case "one":
             copy_font(config, "normal", ["serif", "sans-serif", "monospace", "fantasy", "cursive"])
@@ -28,10 +29,15 @@ function expand_font_options(config: config_type): config_type {
             disable_font(config, ["math", "unknown"])
             break;
         case "advanced":
+            // advanced is 1:1 with the full mapping
             break;
     }
     return config;
 }
+
+// if this loads before content.ts, then this is ignore and we'll receive the config when content.ts is ready
+// if this loads after content.ts, we missed its message and we need to request it
+window.dispatchEvent(new CustomEvent('frankenfont-config-send'));
 
 window.addEventListener("frankenfont-config-receive", (e) => {
     let config: config_type = (e as CustomEvent).detail;
@@ -42,10 +48,8 @@ window.addEventListener("frankenfont-config-receive", (e) => {
     });
 });
 
-// if this loads before content.ts, then this is ignore and we'll recieve the config when content.ts is ready
-// if this loads after content.ts, we missed its message and we need to request it
-window.dispatchEvent(new CustomEvent('frankenfont-config-send'));
 
+// for things that really fr need the config
 function wait_for_config(): Promise<config_type> {
     if (FRANKENFONT.config) {
         return Promise.resolve(FRANKENFONT.config);

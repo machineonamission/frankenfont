@@ -34,10 +34,20 @@ function setup_config() {
         config!["enabled"] = global_enable.checked;
     });
     // save
+    const sn = id("save-name");
     id("save").addEventListener("click", () => {
         chrome.storage.sync.set(config!).then(() => {
-            id("save-name").innerText = "Saved! Reload any open pages to see changes.";
+            return handle_mode()
+        }).then(() => {
+            sn.innerText = "Saved! Reload any open pages to see changes.";
+            sn.classList.add("text-success");
+            sn.classList.remove("text-danger");
+        }).catch((e) => {
+            sn.innerText = "Error saving config! " + e;
+            sn.classList.remove("text-success");
+            sn.classList.add("text-danger");
         })
+
     })
     // font selection
     for (const [f_type, {enabled, name}] of Object.entries(config["font-options"])) {

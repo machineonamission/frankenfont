@@ -11,9 +11,6 @@ declare function parseFont(name: string): {
 };
 
 (function () {
-    if (!FRANKENFONT.config || FRANKENFONT.config.mode === "js") {
-        FRANKENFONT.override_prototypes!();
-    }
     // hardcoded map of font types to font families
     const reverse_font_mapping: { [key: string]: string[] } = {
         "serif": ["serif", "ui-sans-serif", "system-ui", "ui-rounded", "arial", "verdana", "tahoma", "trebuchet ms"],
@@ -185,17 +182,19 @@ declare function parseFont(name: string): {
             if (fonttype !== "none") {
                 // if the font has a type
                 // check if config says to replace this type of font
-                const this_font_config = FRANKENFONT.config!["font-options"][fonttype as keyof config_type["font-options"]];
-                if (this_font_config["enabled"]
-                    // edge case: existing font matches user font, no need to override style
-                    && this_font_config["name"] !== fonts[0]) {
-                    // push the new font to the front of the list
-                    fonts.unshift(this_font_config["name"])
-                    // convert to css list
-                    let new_font_family = fonts.map(f => `"${f}"`).join(", ");
-                    // add style to override font
-                    override_styles.insertRule(`${selector} { font-family: ${new_font_family} !important; }`);
-                }
+                wait_for_config().then(config => {
+                    const this_font_config = config["font-options"][fonttype as keyof config_type["font-options"]];
+                    if (this_font_config["enabled"]
+                        // edge case: existing font matches user font, no need to override style
+                        && this_font_config["name"] !== fonts[0]) {
+                        // push the new font to the front of the list
+                        fonts.unshift(this_font_config["name"])
+                        // convert to css list
+                        let new_font_family = fonts.map(f => `"${f}"`).join(", ");
+                        // add style to override font
+                        override_styles.insertRule(`${selector} { font-family: ${new_font_family} !important; }`);
+                    }
+                })
             }
         }
     }
@@ -273,42 +272,39 @@ declare function parseFont(name: string): {
     }
 
 
-    function engine_js() {
-        // for all document changes
-        new MutationObserver(mutations => {
-            for (const mutation of mutations) {
-                for (const node of mutation.addedNodes) {
-                    if (node instanceof HTMLElement) {
-
-                        if (node instanceof HTMLStyleElement || (node instanceof HTMLLinkElement && node.rel === "stylesheet")) {
-                            // wait for styles to load, then handle it
-                            node.addEventListener("load", () => {
-                                handle_sheet(node.sheet);
-                                // force_check_all_deferred_rules()
-                            });
-                        } else {
-                            // for any normal element added, check if any of the deferred computed styles are now able to
-                            // be evaluated, then evaluate them
-                            deferred_computed_styles = deferred_computed_styles.filter(value => {
-                                if (node.matches(value.selector) || node.querySelector(value.selector)) {
-                                    explicit_handle_declarations(value);
-                                    return false;
-                                }
-                                return true;
-                            })
+    // for all document changes
+    new MutationObserver(mutations => {
+        for (const mutation of mutations) {
+            for (const node of mutation.addedNodes) {
+                if (node instanceof HTMLElement) {
+                    [
+                        ...document.querySelectorAll("style, link[rel=stylesheet]"),
+                        ...(node instanceof HTMLStyleElement || (node instanceof HTMLLinkElement && node.rel === "stylesheet") ? [node] : [])
+                    ].forEach((style) => {
+                        style.addEventListener("load", () => {
+                            handle_sheet((style as HTMLStyleElement | HTMLLinkElement).sheet);
+                        });
+                    });
+                    // for any normal element added, check if any of the deferred computed styles are now able to
+                    // be evaluated, then evaluate them
+                    deferred_computed_styles = deferred_computed_styles.filter(value => {
+                        if (node.matches(value.selector) || node.querySelector(value.selector)) {
+                            explicit_handle_declarations(value);
+                            return false;
                         }
-                    }
+                        return true;
+                    })
+
                 }
             }
-        }).observe(document, {childList: true, subtree: true});
-        // run any stylesheets we didn't catch
-        for (let sheet of document.styleSheets) {
-            handle_sheet(sheet)
         }
+    }).observe(document, {childList: true, subtree: true});
+    // run any stylesheets we didn't catch
+    for (let sheet of document.styleSheets) {
+        handle_sheet(sheet)
     }
 
     Object.assign(FRANKENFONT, {
-        engine_js: engine_js,
         handle_sheet: handle_sheet,
         handle_direct_declarations: handle_direct_declarations,
     });
