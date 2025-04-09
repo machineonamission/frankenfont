@@ -1,6 +1,6 @@
+// hello everyone my name is multiplexer
 
-(function() {
-    let config = FRANKENFONT.config!;
+wait_for_config().then((config) => {
     if (!config.enabled) {
         return;
     }
@@ -12,4 +12,4 @@
     } else if (config.mode === "js") {
         FRANKENFONT.engine_js!()
     }
-})();
+});

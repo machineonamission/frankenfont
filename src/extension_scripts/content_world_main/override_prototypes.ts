@@ -50,11 +50,11 @@ function override_prototypes() {
 
     // Define a new property descriptor
     Object.defineProperty(CanvasRenderingContext2D.prototype, 'font', {
-        get: function() {
+        get: function () {
             console.log('Custom font getter called with:');
             return originalDescriptor.get!.call(this);
         },
-        set: function(value) {
+        set: function (value) {
             console.log('Custom font setter called with:', value);
 
             // You can modify the value here if you want
@@ -66,4 +66,21 @@ function override_prototypes() {
         configurable: true,
         enumerable: true
     });
+    FRANKENFONT.overrode_prototypes.is_overriden = true;
 }
+
+function restore_prototypes() {
+    if (FRANKENFONT.overrode_prototypes.is_overriden) {
+        CSSStyleSheet.prototype.insertRule = FRANKENFONT.overrode_prototypes.insertRule!;
+        CSSStyleSheet.prototype.addRule = FRANKENFONT.overrode_prototypes.addRule!;
+        CSSStyleSheet.prototype.replace = FRANKENFONT.overrode_prototypes.replace!;
+        CSSStyleSheet.prototype.replaceSync = FRANKENFONT.overrode_prototypes.replaceSync!;
+        Object.defineProperty(CanvasRenderingContext2D.prototype, 'font', FRANKENFONT.overrode_prototypes.font!);
+    }
+}
+
+wait_for_config().then(config => {
+    if (!config.enabled || config.mode !== "js") {
+       restore_prototypes()
+    }
+})

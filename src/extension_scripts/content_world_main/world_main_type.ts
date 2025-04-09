@@ -5,6 +5,7 @@ let FRANKENFONT: {
     handle_sheet: ((sheet: CSSStyleSheet) => void) | null,
     waiting_for_config: ((value: (config_type | PromiseLike<config_type>)) => void)[],
     overrode_prototypes: {
+        is_overriden: boolean,
         insertRule: typeof CSSStyleSheet.prototype.insertRule | null,
         addRule: typeof CSSStyleSheet.prototype.addRule | null,
         replaceSync: typeof CSSStyleSheet.prototype.replaceSync | null,
@@ -18,6 +19,7 @@ let FRANKENFONT: {
     handle_sheet: null,
     waiting_for_config: [],
     overrode_prototypes: {
+        is_overriden: false,
         insertRule: null,
         addRule: null,
         replaceSync: null,

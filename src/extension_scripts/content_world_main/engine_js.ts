@@ -10,8 +10,10 @@ declare function parseFont(name: string): {
     'line-height': string
 };
 
-Object.assign(FRANKENFONT, (function () {
-    override_prototypes();
+(function () {
+    if (!FRANKENFONT.config || FRANKENFONT.config.mode === "js") {
+        override_prototypes();
+    }
     // hardcoded map of font types to font families
     const reverse_font_mapping: { [key: string]: string[] } = {
         "serif": ["serif", "ui-sans-serif", "system-ui", "ui-rounded", "arial", "verdana", "tahoma", "trebuchet ms"],
@@ -39,6 +41,37 @@ Object.assign(FRANKENFONT, (function () {
         "revert-layer",
         "unset"
     ]
+
+    type cors_response = { "id": string, "status": "ok", "text": string }
+        | { "id": string, "status": "error", "error": string };
+    let cors_waiting: {
+        [key: string]: {
+            "resolve": (value: string) => void,
+            "reject": (reason?: any) => void
+        }
+    } = {}
+
+    function cors(url: string): Promise<string> {
+        return new Promise<string>((resolve, reject) => {
+            const id = crypto.randomUUID()
+            cors_waiting[id] = {"resolve": resolve, "reject": reject};
+            window.dispatchEvent(new CustomEvent('frankenfont-cors-send', {detail: {"url": url, "id": id}}));
+        });
+    }
+
+    // listen for serialized rules intercepted in the injected script, and handle them
+    document.addEventListener("frankenfont-cors-receive", (event) => {
+        const resp = (event as CustomEvent).detail as cors_response;
+        const {id, status} = resp;
+        if (status === "ok") {
+            const {text} = resp;
+            cors_waiting[id].resolve(text)
+        } else {
+            const {error} = resp;
+            cors_waiting[id].reject(error)
+        }
+        delete cors_waiting[id];
+    });
 
     // list of css styles that are fonts, and do apply to elements, but have var()s and the element doesn't exist,
     // so the vars cant be computed
@@ -130,7 +163,7 @@ Object.assign(FRANKENFONT, (function () {
             if (fonttype !== "none") {
                 // if the font has a type
                 // check if config says to replace this type of font
-                const this_font_config = config!["font-options"][fonttype as keyof config_type["font-options"]];
+                const this_font_config = FRANKENFONT.config!["font-options"][fonttype as keyof config_type["font-options"]];
                 if (this_font_config["enabled"]
                     // edge case: existing font matches user font, no need to override style
                     && this_font_config["name"] !== fonts[0]) {
@@ -202,16 +235,9 @@ Object.assign(FRANKENFONT, (function () {
             if ((e as DOMException).name === "SecurityError") {
                 // if we get a security error, it means the css has CORS restrictions, so we need to ask the background
                 // worker to fetch it for us
-                chrome.runtime.sendMessage(sheet.href, (r: { "status": "ok", "text": string }
-                    | { "status": "error", "error": string }
-                ) => {
-                    if (r.status === "ok") {
-                        parse_css(r.text)
-                        return
-                    } else {
-                        console.error("Error fetching css file", r.error);
-                    }
-                });
+                if (sheet.href) {
+                    cors(sheet.href).then(parse_css).catch(console.error)
+                }
             } else {
                 // some other fuckass error
                 console.error("Unknown Error at accessing cssRules", e);
@@ -226,12 +252,6 @@ Object.assign(FRANKENFONT, (function () {
 
 
     function engine_js() {
-        // listen for serialized rules intercepted in the injected script, and handle them
-        document.addEventListener("cssRuleIntercepted", (event) => {
-            explicit_handle_declarations((event as CustomEvent).detail as serializable_rule);
-        });
-
-
         // for all document changes
         new MutationObserver(mutations => {
             for (const mutation of mutations) {
@@ -265,9 +285,9 @@ Object.assign(FRANKENFONT, (function () {
         }
     }
 
-    return {
+    Object.assign(FRANKENFONT, {
         engine_js: engine_js,
         handle_sheet: handle_sheet,
         handle_direct_declarations: handle_direct_declarations,
-    }
-})());
+    });
+})();

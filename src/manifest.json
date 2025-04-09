@@ -39,6 +39,7 @@
     },
     {
       "js": [
+        "extension_scripts/content_world_main/parser.js",
         "extension_scripts/content_world_main/world_main_type.js",
         "extension_scripts/content_world_main/receive_config.js",
         "extension_scripts/content_world_main/override_prototypes.js",
