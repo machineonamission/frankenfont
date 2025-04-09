@@ -14,3 +14,6 @@ window.addEventListener("frankenfont-cors-send", (e) => {
         window.dispatchEvent(new CustomEvent('frankenfont-cors-receive', {detail: r}));
     });
 });
+
+// @ts-ignore
+window["sex"] = "balls"

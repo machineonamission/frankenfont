@@ -1,15 +1,13 @@
 let docready = false;
 let storageready = false;
 
-let config: config_type | null = null;
-
 document.addEventListener("DOMContentLoaded", function (event) {
     docready = true;
     wait_for_both()
 });
 
-get_config().then(items => {
-    config = items as config_type;
+get_config().then(() => {
+    // make sure config is loaded, even if its not accessed here
     storageready = true;
     wait_for_both()
 })
