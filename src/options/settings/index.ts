@@ -68,11 +68,20 @@ function setup_config() {
                 font_name.setAttribute("disabled", "true")
             }
         });
+
         // font name
+        let fallback_type;
+        if (["normal", "math", "unknown"].includes(f_type)) {
+            fallback_type = "sans-serif";
+        } else {
+            fallback_type = f_type;
+        }
         font_name.value = name;
         font_name.addEventListener("change", () => {
             config!["font-options"][f_type as keyof config_type["font-options"]]["name"] = font_name.value;
+            font_name.style.setProperty("font-family", `"${font_name.value}", ${fallback_type}`);
         });
+        font_name.style.setProperty("font-family", `"${font_name.value}", ${fallback_type}`);
     }
 
     // specificity

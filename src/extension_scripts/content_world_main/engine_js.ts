@@ -278,7 +278,7 @@ declare function parseFont(name: string): {
             for (const node of mutation.addedNodes) {
                 if (node instanceof HTMLElement) {
                     [
-                        ...document.querySelectorAll("style, link[rel=stylesheet]"),
+                        ...node.querySelectorAll("style, link[rel=stylesheet]"),
                         ...(node instanceof HTMLStyleElement || (node instanceof HTMLLinkElement && node.rel === "stylesheet") ? [node] : [])
                     ].forEach((style) => {
                         style.addEventListener("load", () => {
