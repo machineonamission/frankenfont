@@ -3,7 +3,8 @@ const js_scripts: chrome.scripting.RegisteredContentScript[] = [
         "id": "js-content",
         "js": [
             "extension_scripts/config.js",
-            "extension_scripts/content.js"
+            "extension_scripts/content/parser.js",
+            "extension_scripts/content/engine_js.js"
         ],
         "matches": [
             "<all_urls>"
@@ -15,11 +16,7 @@ const js_scripts: chrome.scripting.RegisteredContentScript[] = [
     {
         "id": "js-content-world-main",
         "js": [
-            "extension_scripts/content_world_main/parser.js",
-            "extension_scripts/content_world_main/world_main_type.js",
-            "extension_scripts/content_world_main/receive_config.js",
             "extension_scripts/content_world_main/override_prototypes.js",
-            "extension_scripts/content_world_main/engine_js.js",
         ],
         "matches": [
             "<all_urls>"

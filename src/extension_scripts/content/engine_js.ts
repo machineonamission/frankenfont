@@ -8,7 +8,7 @@ declare function parseFont(name: string): {
     'font-family': string[]
     'font-size': string
     'line-height': string
-};
+} | null;
 
 // hardcoded map of font types to font families
 const reverse_font_mapping: { [key: string]: string[] } = {
@@ -38,38 +38,6 @@ const css_noops = [
     "unset"
 ]
 
-type cors_response = { "id": string, "status": "ok", "text": string }
-    | { "id": string, "status": "error", "error": string };
-let cors_waiting: {
-    [key: string]: {
-        "resolve": (value: string) => void,
-        "reject": (reason?: any) => void
-    }
-} = {}
-
-function cors(url: string): Promise<string> {
-    console.log("cors", url)
-    return new Promise<string>((resolve, reject) => {
-        const id = crypto.randomUUID()
-        cors_waiting[id] = {"resolve": resolve, "reject": reject};
-        window.dispatchEvent(new CustomEvent('frankenfont-cors-send', {detail: {"url": url, "id": id}}));
-    });
-}
-
-// listen for serialized rules intercepted in the injected script, and handle them
-window.addEventListener("frankenfont-cors-receive", (event) => {
-    const resp = (event as CustomEvent).detail as cors_response;
-    const {id, status} = resp;
-    if (status === "ok") {
-        const {text} = resp;
-        cors_waiting[id].resolve(text)
-    } else {
-        const {error} = resp;
-        cors_waiting[id].reject(error)
-    }
-    delete cors_waiting[id];
-});
-
 // list of css styles that are fonts, and do apply to elements, but have var()s and the element doesn't exist,
 // so the vars cant be computed
 // these are monitored in a mutation observer until the element exists, then the vars are computed
@@ -91,6 +59,7 @@ function get_font_type(fonts: string[]): keyof typeof reverse_font_mapping {
 }
 
 function get_computed_style(selector: string, property: string): string | null {
+    // get a computed style given a selector and a property to compute
     try {
         let doc;
         if (selector === ":root") {
@@ -113,19 +82,32 @@ function get_computed_style(selector: string, property: string): string | null {
 }
 
 function compute_vars(selector: string, full_property: string): string | null {
+    // recursively compute vars and substitute back into the string
     let error: boolean = false;
-    let out: string = full_property.replace(/var\(([^), ]+)[^)]*\)/gi, ((match, m1) => {
-        if (error) {
-            return ""
-        }
-        const s = get_computed_style(selector, m1);
-        if (s === null) {
-            error = true;
-            return ""
-        } else {
-            return s
-        }
-    }));
+    let out = full_property;
+    let count = 0;
+    // vars can nest, so do it iteratively
+    while (out.includes("var(") && !error && count < 10) {
+        // find var(), and replace it with the computed value
+        out = out.replace(/var\(([^(), ]+)[^()]*\)/gi, ((_, m1) => {
+            if (error) {
+                return ""
+            }
+            const s = get_computed_style(selector, m1);
+            if (s === null) {
+                error = true;
+                return ""
+            } else {
+                return s
+            }
+        }));
+        count++;
+    }
+    // failsafe in case my code sucks
+    if (count > 10) {
+        error = true;
+        console.error("[FRANKENFONT] Error computing vars, too many iterations", selector, full_property);
+    }
     if (error) {
         return null;
     } else {
@@ -141,6 +123,8 @@ function explicit_handle_declarations(rule: serializable_rule) {
     let fonts: string[] = [];
     // handle font tags
     // if element has actual font tag
+    let parsed = null;
+    let defer = false;
     if (font && !css_noops.includes(font)) {
         // if it has vars, we need to compute those
         if (font.includes("var(")) {
@@ -149,40 +133,52 @@ function explicit_handle_declarations(rule: serializable_rule) {
             if (!font) {
                 // we couldn't compute it, its likely the element doesnt exist yet.
                 // push it to the deferred list
-                deferred_computed_styles.push(rule);
-                return
+                defer = true;
             } else {
                 // if we could compute it, parse
-                fonts = parseFont(font)["font-family"];
+                parsed = parseFont(font);
             }
         } else {
             // parse out the families from the font
-            fonts = parseFont(font)["font-family"];
+            parsed = parseFont(font);
         }
-
+        if (parsed === null) {
+            console.debug("[FRANKENFONT] Error parsing font string, deferring to font-family.", font);
+            const ff = get_computed_style(rule.selector, "font-family")
+            if (ff) {
+                fonts = parseFontFamily(ff);
+            } else {
+                // if it has no computed style, defer it unless font_family comes up with something
+                defer = true;
+            }
+        } else {
+            fonts = parsed["font-family"];
+        }
     }
+
     // handle font-family tags
     if (font_family && !css_noops.includes(font_family)) {
         // compute or defer vars
         if (font_family.includes("var(")) {
-            font_family = compute_vars(selector, font_family);
-            if (!font_family) {
-                deferred_computed_styles.push(rule);
-                return
+            const cff = compute_vars(selector, font_family);
+            if (cff) {
+                font_family = cff;
+            } else {
+                defer = true;
             }
         }
         // parse out families
         fonts = parseFontFamily(font_family);
     }
     // if this element has font declarations
-    if (fonts) {
+    if (fonts.length > 0) {
         // get the predicted font type
         let fonttype = get_font_type(fonts);
         if (fonttype !== "none") {
             // if the font has a type
             // check if config says to replace this type of font
             get_config().then(config => {
-                const this_font_config = config["font-options"][fonttype as keyof config_type["font-options"]];
+                const this_font_config = config["computed-font-options"][fonttype as keyof font_options];
                 if (this_font_config["enabled"]
                     // edge case: existing font matches user font, no need to override style
                     && this_font_config["name"] !== fonts[0]) {
@@ -195,6 +191,8 @@ function explicit_handle_declarations(rule: serializable_rule) {
                 }
             })
         }
+    } else if (defer) {
+        deferred_computed_styles.push(rule)
     }
 }
 
@@ -203,11 +201,13 @@ function handle_direct_declarations(rule: CSSStyleRule) {
     let style = rule.style;
     let font = style["font" as keyof typeof style] as string | null;
     let font_family = style["font-family" as keyof typeof style] as string | null;
-    explicit_handle_declarations({
-        font: font,
-        font_family: font_family,
-        selector: rule.selectorText
-    })
+    if (font || font_family) {
+        explicit_handle_declarations({
+            font: font,
+            font_family: font_family,
+            selector: rule.selectorText
+        })
+    }
 }
 
 function handle_css(rules: CSSRuleList) {
@@ -255,9 +255,13 @@ function handle_sheet(sheet: CSSStyleSheet | null) {
         if ((e as DOMException).name === "SecurityError") {
             // if we get a security error, it means the css has CORS restrictions, so we need to ask the background
             // worker to fetch it for us
-            if (sheet.href) {
-                cors(sheet.href).then(parse_css).catch(console.error)
-            }
+            chrome.runtime.sendMessage(sheet.href, (r: cors_response) => {
+                if (r.status === "ok") {
+                    parse_css(r.text)
+                } else {
+                    console.error("Error fetching css file", r.error);
+                }
+            });
         } else {
             // some other fuckass error
             console.error("Unknown Error at accessing cssRules", e);

@@ -21,10 +21,46 @@ function wait_for_both() {
 const id = document.getElementById.bind(document) as (id: string) => HTMLElement;
 
 
+function copy_font(config: config_type, in_font: string, out_font: string[]) {
+    for (const type of out_font as (keyof font_options)[]) {
+        config["computed-font-options"][type] = config["font-options"][in_font as keyof font_options];
+    }
+}
+
+function disable_font(config: config_type, in_fonts: string[]) {
+    for (const type of in_fonts as (keyof font_options)[]) {
+        config["computed-font-options"][type].enabled = false;
+    }
+}
+
+function expand_font_options(config: config_type): config_type {
+    // expands out the compact low-specificity config into the full mapping for each font
+    config["computed-font-options"] = config["font-options"];
+    switch (config.specificity) {
+        case "one":
+            copy_font(config, "normal", ["serif", "sans-serif", "monospace", "fantasy", "cursive"])
+            disable_font(config, ["math", "unknown"])
+            break;
+        case "minimal":
+            copy_font(config, "normal", ["serif", "sans-serif", "fantasy", "cursive"])
+            disable_font(config, ["math", "unknown"])
+            break;
+        case "standard":
+            copy_font(config, "sans-serif", ["fantasy", "cursive"])
+            disable_font(config, ["math", "unknown"])
+            break;
+        case "advanced":
+            // advanced is 1:1 with the full mapping
+            break;
+    }
+    return config;
+}
+
 function setup_config() {
     if (config === null) {
         throw new Error("huh?");
     }
+    document.body.style.setProperty("font-family", `"${config["computed-font-options"]["normal"].name}", "Atkinson Hyperlegible Next", sans-serif`);
     // global enable switch
     const global_enable = (id("enable") as HTMLInputElement);
     global_enable.checked = config.enabled;
@@ -34,7 +70,8 @@ function setup_config() {
     // save
     const sn = id("save-name");
     id("save").addEventListener("click", () => {
-        chrome.storage.sync.set(config!).then(() => {
+        config = expand_font_options(config!)
+        chrome.storage.sync.set(config).then(() => {
             return handle_mode()
         }).then(() => {
             sn.innerText = "Saved! Reload any open pages to see changes.";

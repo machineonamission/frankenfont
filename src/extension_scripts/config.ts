@@ -26,7 +26,7 @@ type config_type = {
 }
 
 const default_config: config_type = {
-    enabled: true,
+    enabled: false,
     url_mode: "blacklist",
     specificity: "standard",
     url_whitelist: [],
