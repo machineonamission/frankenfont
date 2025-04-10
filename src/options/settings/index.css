@@ -12,3 +12,11 @@
     background: var(--bs-secondary);
     color: #ccc;
 }
+
+.icon {
+    display: inline-block;
+    position: relative;
+    /*ripped straight from fontawesome*/
+    height: 1em;
+    vertical-align: -.125em;
+}

@@ -58,11 +58,32 @@ type serializable_rule = { font: string | null, font_family: string | null, sele
 let config: config_type | null;
 
 async function get_config(): Promise<config_type> {
-    if (config) {
-        return config;
-    } else {
+    if (!config) {
         config = (await chrome.storage.sync.get(default_config)) as config_type;
-        return config;
     }
+    return config;
+}
 
+function wait_for_config_and_dom() {
+    return new Promise<void>((resolve) => {
+        let config_ready = false;
+        let dom_ready = false;
+        const check = () => {
+            if (config_ready && dom_ready) {
+                resolve();
+            }
+        };
+        get_config().then(c => {
+            config_ready = true;
+        });
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => {
+                dom_ready = true;
+                check();
+            });
+        } else {
+            dom_ready = true;
+            check();
+        }
+    });
 }

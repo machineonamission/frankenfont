@@ -1,23 +1,3 @@
-let docready = false;
-let storageready = false;
-
-document.addEventListener("DOMContentLoaded", function (event) {
-    docready = true;
-    wait_for_both()
-});
-
-get_config().then(() => {
-    // make sure config is loaded, even if its not accessed here
-    storageready = true;
-    wait_for_both()
-})
-
-function wait_for_both() {
-    if (docready && storageready) {
-        setup_config()
-    }
-}
-
 const id = document.getElementById.bind(document) as (id: string) => HTMLElement;
 
 
@@ -56,11 +36,13 @@ function expand_font_options(config: config_type): config_type {
     return config;
 }
 
-function setup_config() {
+wait_for_config_and_dom().then(()=> {
     if (config === null) {
         throw new Error("huh?");
     }
-    document.body.style.setProperty("font-family", `"${config["computed-font-options"]["normal"].name}", "Atkinson Hyperlegible Next", sans-serif`);
+    if (config.enabled && config["computed-font-options"]["sans-serif"].enabled) {
+        document.body.style.setProperty("font-family", `"${config["computed-font-options"]["sans-serif"].name}", "Atkinson Hyperlegible Next", sans-serif`);
+    }
     // global enable switch
     const global_enable = (id("enable") as HTMLInputElement);
     global_enable.checked = config.enabled;
@@ -128,7 +110,7 @@ function setup_config() {
         config!.specificity = spec as config_type["specificity"];
         handle_spec(spec as config_type["specificity"]);
     })
-}
+})
 
 function handle_spec(spec: config_type["specificity"]) {
     document.querySelectorAll(`.spec.spec-${spec}`).forEach((el) => {

@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelector('#options')!.addEventListener('click', function () {
         if (chrome.runtime.openOptionsPage) {
-            chrome.runtime.openOptionsPage();
+            chrome.runtime.openOptionsPage().catch(console.error);
         } else {
             window.open(chrome.runtime.getURL('options.html'));
         }
@@ -15,4 +15,10 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
     document.querySelector("#version")!.innerHTML = "v" + chrome.runtime.getManifest().version;
+});
+
+wait_for_config_and_dom().then(() => {
+    if (config!.enabled && config!["computed-font-options"]["sans-serif"].enabled) {
+        document.body.style.setProperty("font-family", `"${config!["computed-font-options"]["sans-serif"].name}", "Atkinson Hyperlegible Next", sans-serif`);
+    }
 });

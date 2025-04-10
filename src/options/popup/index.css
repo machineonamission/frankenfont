@@ -14,5 +14,14 @@ p:last-child {
     width: 100%;
     padding: 0.75rem;
     margin-right: auto;
-    margin-left: auto
+    margin-left: auto;
+    min-width: 20rem;
+}
+
+.icon {
+    display: inline-block;
+    position: relative;
+    /*ripped straight from fontawesome*/
+    height: 1em;
+    vertical-align: -.125em;
 }
