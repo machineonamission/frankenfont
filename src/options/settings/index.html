@@ -55,13 +55,15 @@
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="spec" id="spec-standard" value="standard">
+                            <input class="form-check-input" type="radio" name="spec" id="spec-standard"
+                                   value="standard">
                             <label class="form-check-label" for="spec-standard">
                                 Standard
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="spec" id="spec-advanced" value="advanced">
+                            <input class="form-check-input" type="radio" name="spec" id="spec-advanced"
+                                   value="advanced">
                             <label class="form-check-label" for="spec-advanced">
                                 Advanced
                             </label>
@@ -148,31 +150,19 @@
             <legend><i class="fa-solid fa-globe-pointer"></i> Websites:</legend>
             <div class="ms-4 d-grid gap-2">
                 <div>
-                    <p><i class="fa-solid fa-filter"></i> Website filtering mode:</p>
-                    <form id="bwlist">
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="bwlist" id="bwlist-blacklist"
-                                   value="blacklist" checked>
-                            <label class="form-check-label" for="bwlist-blacklist">
-                                Blacklist
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="bwlist" id="bwlist-whitelist"
-                                   value="whitelist">
-                            <label class="form-check-label" for="bwlist-whitelist">
-                                Whitelist
-                            </label>
-                        </div>
-                    </form>
+                    <p>See <a href="https://developer.chrome.com/docs/extensions/develop/concepts/match-patterns">match
+                        pattern syntax</a>.</p>
+                    <p><code>*</code> is a wildcard, and <code>&lt;all_urls&gt;</code> matches
+                        all urls.</p>
+                    <p>Put one URL match pattern on each line.</p>
                 </div>
-                <div id="blacklist">
-                    <label for="blacklist-text" class="form-label"><i class="fa-solid fa-x"></i> Blacklist:</label>
-                    <textarea class="form-control" id="blacklist-text" rows="3"></textarea>
+                <div>
+                    <label for="whitelist" class="form-label"><i class="fa-solid fa-check"></i> Whitelist:</label>
+                    <textarea class="form-control" id="whitelist" rows="3"></textarea>
                 </div>
-                <div id="whitelist">
-                    <label for="whitelist-text" class="form-label"><i class="fa-solid fa-check"></i> Whitelist:</label>
-                    <textarea class="form-control" id="whitelist-text" rows="3"></textarea>
+                <div>
+                    <label for="blacklist" class="form-label"><i class="fa-solid fa-x"></i> Blacklist:</label>
+                    <textarea class="form-control" id="blacklist" rows="3"></textarea>
                 </div>
             </div>
         </fieldset>
@@ -187,13 +177,14 @@
                     </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="engine" id="engine-css" value="css">
+                    <input class="form-check-input" type="radio" name="engine" id="engine-css" value="css" disabled>
                     <label class="form-check-label" for="engine-css">
                         CSS
                     </label>
                 </div>
                 <div class="form-check">
-                    <input class="form-check-input" type="radio" name="engine" id="engine-noremotefonts" value="noremotefonts">
+                    <input class="form-check-input" type="radio" name="engine" id="engine-noremotefonts"
+                           value="noremotefonts" disabled>
                     <label class="form-check-label" for="engine-noremotefonts">
                         Disable remote fonts
                     </label>

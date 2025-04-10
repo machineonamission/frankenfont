@@ -36,7 +36,7 @@ function expand_font_options(config: config_type): config_type {
     return config;
 }
 
-wait_for_config_and_dom().then(()=> {
+wait_for_config_and_dom().then(() => {
     if (config === null) {
         throw new Error("huh?");
     }
@@ -109,6 +109,27 @@ wait_for_config_and_dom().then(()=> {
         const spec = (document.querySelector('input[name="spec"]:checked') as HTMLInputElement).value;
         config!.specificity = spec as config_type["specificity"];
         handle_spec(spec as config_type["specificity"]);
+    })
+
+    // white/black list
+    const whitelist = id("whitelist") as HTMLTextAreaElement;
+    whitelist.value = config.url_whitelist.join("\n");
+    whitelist.addEventListener("change", () => {
+        if (whitelist.value) {
+            config!.url_whitelist = whitelist.value.split("\n") as config_type["url_whitelist"];
+        } else {
+            config!.url_whitelist = [] as config_type["url_whitelist"];
+        }
+
+    })
+    const blacklist = id("blacklist") as HTMLTextAreaElement;
+    blacklist.value = config.url_blacklist.join("\n");
+    blacklist.addEventListener("change", () => {
+        if (blacklist.value) {
+            config!.url_blacklist = blacklist.value.split("\n") as config_type["url_blacklist"];
+        } else {
+            config!.url_blacklist = [] as config_type["url_blacklist"];
+        }
     })
 })
 

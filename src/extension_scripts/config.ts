@@ -16,7 +16,6 @@ type font_options = {
 
 type config_type = {
     enabled: boolean,
-    url_mode: "whitelist" | "blacklist",
     specificity: "one" | "minimal" | "standard" | "advanced",
     url_whitelist: string[],
     url_blacklist: string[],
@@ -27,9 +26,8 @@ type config_type = {
 
 const default_config: config_type = {
     enabled: false,
-    url_mode: "blacklist",
     specificity: "standard",
-    url_whitelist: [],
+    url_whitelist: ["<all_urls>"],
     url_blacklist: [],
     "font-options": {
         serif: {enabled: false, name: ""},
@@ -75,6 +73,7 @@ function wait_for_config_and_dom() {
         };
         get_config().then(c => {
             config_ready = true;
+            check();
         });
         if (document.readyState === "loading") {
             document.addEventListener("DOMContentLoaded", () => {
