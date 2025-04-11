@@ -15,7 +15,7 @@ function disable_font(config: config_type, in_fonts: string[]) {
 
 function expand_font_options(config: config_type): config_type {
     // expands out the compact low-specificity config into the full mapping for each font
-    config["computed-font-options"] = config["font-options"];
+    config["computed-font-options"] = structuredClone(config["font-options"]);
     switch (config.specificity) {
         case "one":
             copy_font(config, "normal", ["serif", "sans-serif", "monospace", "fantasy", "cursive"])
@@ -39,9 +39,6 @@ function expand_font_options(config: config_type): config_type {
 wait_for_config_and_dom().then(() => {
     if (config === null) {
         throw new Error("huh?");
-    }
-    if (config.enabled && config["computed-font-options"]["sans-serif"].enabled) {
-        document.body.style.setProperty("font-family", `"${config["computed-font-options"]["sans-serif"].name}", "Atkinson Hyperlegible Next", sans-serif`);
     }
     // global enable switch
     const global_enable = (id("enable") as HTMLInputElement);
