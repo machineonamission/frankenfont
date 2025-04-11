@@ -8,11 +8,6 @@
     display: block;
 }
 
-.form-control, .form-control:focus {
-    background: var(--bs-secondary);
-    color: #ccc;
-}
-
 .icon {
     display: inline-block;
     position: relative;
