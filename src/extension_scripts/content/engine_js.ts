@@ -1,10 +1,10 @@
 // TODO: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof
-//  the  fucking try it editor, with constructed stylesheet, is not workig
+//  constructed stylesheets inside shadow root dont work
 
-const franken_debug = console.debug.bind(console, '[FRANKENFONT]');
-const franken_log = console.log.bind(console, '[FRANKENFONT]');
-const franken_warn = console.warn.bind(console, '[FRANKENFONT]');
-const franken_error = console.error.bind(console, '[FRANKENFONT]');
+const franken_debug = console.debug.bind(console, '[frankenfont]');
+const franken_log = console.log.bind(console, '[frankenfont]');
+const franken_warn = console.warn.bind(console, '[frankenfont]');
+const franken_error = console.error.bind(console, '[frankenfont]');
 
 // parser.js
 declare function parseFontFamily(name: string): string[];
@@ -137,7 +137,7 @@ function handle_document(target_document: Document | ShadowRoot) {
             // }
             known_vars[name] = value;
             if (waiting_on_vars[name]) {
-                franken_log("found waiting var", name, value)
+                // franken_log("found waiting var", name, value)
                 waiting_on_vars[name].forEach(explicit_handle_declarations)
             }
             delete waiting_on_vars[name];
