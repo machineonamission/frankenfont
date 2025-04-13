@@ -52,7 +52,12 @@ const default_config: config_type = {
     mode: "js"
 }
 
-type serializable_rule = { font: string | null, font_family: string | null, selector: string, root?:string };
+type serializable_rule = {
+    font: string | null,
+    font_family: string | null,
+    selector: string,
+    vars: { [variable: string]: string }
+};
 let config: config_type | null;
 
 async function get_config(): Promise<config_type> {

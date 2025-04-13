@@ -11,10 +11,23 @@
 
     function serialize_rule(rule: CSSRule): serializable_rule | null {
         if (rule instanceof CSSStyleRule && (rule.style.font || rule.style.fontFamily)) {
-            return {
-                font: rule.style.font,
-                font_family: rule.style.fontFamily,
-                selector: rule.selectorText
+            let outvars: { [variable: string]: string } = {};
+            const style = rule.style;
+            for (let i = 0; i < style.length; i++) {
+                const r = style[i];
+                if (r.startsWith("--")) {
+                    outvars[r] = style.getPropertyValue(r);
+                }
+            }
+            if ((rule.style.font || rule.style.fontFamily) || Object.keys(outvars).length > 0) {
+                return {
+                    font: rule.style.font,
+                    font_family: rule.style.fontFamily,
+                    selector: rule.selectorText,
+                    vars: outvars
+                }
+            } else {
+                return null
             }
         } else {
             return null
@@ -123,7 +136,7 @@
 
     const originalAttachShadow = Element.prototype.attachShadow;
     Element.prototype.attachShadow = function (init: ShadowRootInit): ShadowRoot {
-        console.warn(init);
+        // console.warn(init);
         const out = originalAttachShadow.call(this, init);
         const id = get_fixed_id(this)
         const event = new CustomEvent("frankenfont-shadow-attached", {detail: id});
