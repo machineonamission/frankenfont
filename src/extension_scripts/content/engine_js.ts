@@ -43,11 +43,11 @@ const css_noops = [
     "unset"
 ]
 
-
 function handle_document(target_document: Document | ShadowRoot) {
 
 // override styles thing
-    let override_styles = new CSSStyleSheet();
+    let override_styles: CSSStyleSheet & { FRANKENFONT?: true } = new CSSStyleSheet();
+    override_styles.FRANKENFONT = true;
     target_document.adoptedStyleSheets.push(override_styles);
 
     function get_font_type(fonts: string[]): keyof typeof reverse_font_mapping {
@@ -342,8 +342,9 @@ function handle_document(target_document: Document | ShadowRoot) {
     for (let sheet of target_document.styleSheets) {
         handle_sheet(sheet)
     }
-    window.addEventListener("frankenfont-css-rules", (event) => {
+    target_document.addEventListener("frankenfont-css-rules", (event) => {
         const rules = (event as CustomEvent).detail as serializable_rule[];
+        franken_log("received rules inside ", target_document)
         rules.forEach(explicit_handle_declarations);
     });
     target_document.addEventListener("frankenfont-shadow-attached", (event) => {
