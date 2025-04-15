@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<div id="host"></div>
+<span>I'm not in the shadow DOM</span>
+<script>
+    const sheet = new CSSStyleSheet();
+    sheet.replaceSync("span { font-family:courier;}");
+
+    const host = document.querySelector("#host");
+
+    const shadow = host.attachShadow({ mode: "open" });
+    shadow.adoptedStyleSheets.push(sheet);
+
+    const span = document.createElement("span");
+    span.textContent = "I'm in the shadow DOM";
+    shadow.appendChild(span);
+
+</script>
+</body>
+</html>

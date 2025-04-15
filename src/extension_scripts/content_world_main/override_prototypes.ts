@@ -7,9 +7,11 @@
     const franken_warn = console.warn.bind(console, '[frankenfont]');
     const franken_error = console.error.bind(console, '[frankenfont]');
 
-    function add_event(rules: serializable_rule[], document: Node) {
-        const event = new CustomEvent("frankenfont-css-rules", {detail: rules});
-        document.dispatchEvent(event);
+    function add_event(rules: serializable_rule[], documents: Node[]) {
+        documents.forEach(d => {
+            const event = new CustomEvent("frankenfont-css-rules", {detail: rules});
+            d.dispatchEvent(event);
+        })
     }
 
     function serialize_rule(rule: CSSRule): serializable_rule | null {
@@ -38,18 +40,21 @@
     }
 
     // serialize and then send the rule
-    function serialize_and_send_rules(rules: CSSRule[], document: Node) {
+    function serialize_and_send_rules(rules: CSSRule[], documents: Node[]) {
         let serialized = rules
             .map(serialize_rule)
             .filter(r => r !== null);
         if (serialized.length > 0) {
-            add_event(serialized, document);
+            add_event(serialized, documents);
         }
     }
 
     // iterate over every css rule in the sheet and serialize and send them
-    function handle_sheet(sheet: CSSRuleList, document: Node) {
-        add_event(serialize_sheet(sheet), document)
+    function handle_sheet(sheet: CSSRuleList, documents: Node[]) {
+        const serialized = serialize_sheet(sheet);
+        if (serialized.length > 0) {
+            add_event(serialized, documents)
+        }
     }
 
     function serialize_sheet(sheet: CSSRuleList) {
@@ -83,22 +88,31 @@
         }
     }
 
+    function get_owners(sheet: CSSStyleSheet & { FRANKENFONT_OWNERS?: Node[] }): Node[] {
+        const owner = sheet.ownerNode;
+        if (owner) {
+            return [owner]
+        } else if (sheet.FRANKENFONT_OWNERS) {
+            return sheet.FRANKENFONT_OWNERS
+        } else {
+            return []
+        }
+    }
 
     const originalInsertRule = CSSStyleSheet.prototype.insertRule;
     CSSStyleSheet.prototype.insertRule = function (rule, index) {
         const result = originalInsertRule.call(this, rule, index);
-        if (this.ownerNode) {
-            serialize_and_send_rules([this.cssRules[result]], this.ownerNode.getRootNode());
-        }
+        serialize_and_send_rules([this.cssRules[result]], get_owners(this));
         return result;
     };
 
     const originalAddRule = CSSStyleSheet.prototype.addRule;
     CSSStyleSheet.prototype.addRule = function (selector, rule, index) {
         const result = originalAddRule.call(this, selector, rule, index);
-        if (this.ownerNode) {
-            serialize_and_send_rules([this.cssRules[result]], this.ownerNode.getRootNode());
-        }
+        const owner = this.ownerNode || (this as CSSStyleSheet & {
+            FRANKENFONT_OWNER?: Node
+        }).FRANKENFONT_OWNER;
+        serialize_and_send_rules([this.cssRules[result]], get_owners(this));
         return result;
     };
 
@@ -107,9 +121,7 @@
         const resultPromise = originalReplace.call(this, rule);
         resultPromise.then(s => {
             // Handle the new CSSStyleSheet.
-            if (this.ownerNode) {
-                handle_sheet(this.cssRules, this.ownerNode.getRootNode());
-            }
+            handle_sheet(this.cssRules, get_owners(this));
         })
         return resultPromise;
     };
@@ -117,9 +129,7 @@
     const originalReplaceSync = CSSStyleSheet.prototype.replaceSync;
     CSSStyleSheet.prototype.replaceSync = function (rule) {
         originalReplaceSync.call(this, rule);
-        if (this.ownerNode) {
-            handle_sheet(this.cssRules, this.ownerNode.getRootNode());
-        }
+        handle_sheet(this.cssRules, get_owners(this));
     };
 
     // // console.log("CSSStyleSheet methods have been overridden.");
@@ -155,7 +165,54 @@
         return out;
     }
 
-    type frankenAdopted = (CSSStyleSheet & {FRANKENFONT?: true})[] & {FRANKENFONT?: true}
+    type frankenAdopted = (CSSStyleSheet & { FRANKENFONT?: true })[] & { FRANKENFONT?: true }
+
+    function is_frankenfont_sheet(i: CSSStyleSheet & { FRANKENFONT_SHEET?: true }): boolean {
+        if (i.FRANKENFONT_SHEET) {
+            return true
+        } else if (i.cssRules[0].cssText.includes("--FRANKENFONT")) {
+            i.FRANKENFONT_SHEET = true;
+            return true
+        }
+        return false
+    }
+
+    function handle_unowned_sheet(i: CSSStyleSheet & {
+        FRANKENFONT_OWNERS?: Node[]
+    }, doc: Node) {
+        if (!i.FRANKENFONT_OWNERS) {
+            i.FRANKENFONT_OWNERS = []
+        }
+        if (!i.FRANKENFONT_OWNERS.includes(doc) && !is_frankenfont_sheet(i)) {
+            handle_sheet(i.cssRules, [doc]);
+            i.FRANKENFONT_OWNERS.push(doc);
+        }
+    }
+
+    function override_push(orig: frankenAdopted, doc: Node) {
+        // override the push method to call our code
+        const origInsert = orig.splice
+        orig.push = function (...items: CSSStyleSheet[]) {
+            // new sheet is added, lets handle the bich
+            items.forEach((i: CSSStyleSheet & {
+                FRANKENFONT_OWNERS?: Node[]
+            }) => {
+                handle_unowned_sheet(i, doc)
+            })
+            // always insert new stylesheets BEFORE frankenfont sheets.
+            let index = this.length;
+            for (const [i, sheet] of this.entries()) {
+                if (is_frankenfont_sheet(sheet)) {
+                    index = i;
+                    break
+                }
+            }
+            // franken_log("running push on ", this, index, items);
+            origInsert.call(this, index, 0, ...items)
+            return this.length;
+        }
+        orig.FRANKENFONT = true;
+    }
 
     const overrides = [ShadowRoot, Document];
     overrides.forEach(elem => {
@@ -163,20 +220,12 @@
         Object.defineProperty(elem.prototype, 'adoptedStyleSheets', {
             get: function () {
                 const doc = this;
-                franken_log('Custom adopted getter called');
+                // franken_log('Custom adopted getter called');
                 // get the underlying value
                 let orig: frankenAdopted = originalAdopted.get!.call(this);
                 // if the value hasnt been modified yet
                 if (!orig.FRANKENFONT) {
-                    // override the push method to call our code
-                    const origPush = orig.push;
-                    orig.push = function (...items: CSSStyleSheet[]) {
-                        items.forEach(i => {
-                            handle_sheet(i.cssRules, doc);
-                        })
-                        return origPush(...items);
-                    }
-                    orig.FRANKENFONT = true;
+                    override_push(orig, doc);
                     // set the underlying array
                     originalAdopted.set!.call(this, orig);
                 }
@@ -185,20 +234,24 @@
             set: function (value: CSSStyleSheet[]) {
                 // we have to keep any of our own arrays
                 let orig: frankenAdopted = originalAdopted.get!.call(this);
-                const keep = orig.filter(i => i.FRANKENFONT);
+                // franken_warn(orig);
+                const keep = orig.filter(is_frankenfont_sheet);
                 // handle any new sheets
-                // TODO, prevent duplicates
-                orig.forEach(i => {
-                    handle_sheet(i.cssRules, this);
+                const doc = this;
+                value.forEach((i: CSSStyleSheet & {
+                    FRANKENFONT_OWNERS?: Node[]
+                }) => {
+                    handle_unowned_sheet(i, doc)
                 })
-                const out = keep.concat(value);
-                franken_log('Custom adopted setter called with:', value, orig, out);
+                // our stylesheets must go last to take priority
+                const out = value.concat(keep);
+                override_push(out, doc);
+                // franken_log('Custom adopted setter called with:', this, value);
                 // return the underlying setter, plus our sheets
                 return originalAdopted.set!.call(this, out);
             },
-            configurable: true,
-            enumerable: true
-
+            // configurable: true,
+            // enumerable: false,
         })
     });
 })();
