@@ -1,5 +1,4 @@
-// TODO: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof
-//  constructed stylesheets inside shadow root dont work
+// FINAL TODO: handle the html style tag :/
 
 const franken_debug = console.debug.bind(console, '[frankenfont]');
 const franken_log = console.log.bind(console, '[frankenfont]');
@@ -43,6 +42,7 @@ const css_noops = [
     "unset"
 ]
 let known_vars: { [key: string]: string } = {};
+
 function handle_document(target_document: Document | ShadowRoot) {
 
 // override styles thing
@@ -60,7 +60,6 @@ function handle_document(target_document: Document | ShadowRoot) {
         }
         return "unknown"
     }
-
 
 
     type compute_result_type = "full" | "fallback" | "none";
@@ -219,8 +218,12 @@ function handle_document(target_document: Document | ShadowRoot) {
                         fonts.unshift(this_font_config["name"])
                         // convert to css list
                         let new_font_family = fonts.map(f => `"${f}"`).join(", ");
-                        // add style to override font
-                        override_styles.insertRule(`${selector} { font-family: ${new_font_family} !important; }`);
+                        if (selector instanceof HTMLElement) {
+                            selector.style.fontFamily = new_font_family;
+                        } else {
+                            // add style to override font
+                            override_styles.insertRule(`${selector} { font-family: ${new_font_family} !important; }`);
+                        }
                     }
                 })
             }
@@ -233,9 +236,7 @@ function handle_document(target_document: Document | ShadowRoot) {
         }
     }
 
-    function handle_direct_declarations(rule: CSSStyleRule) {
-        // "serialize" the rule, then handle it
-        let style = rule.style;
+    function handle_pure_style(style: CSSStyleDeclaration, selector: string | HTMLElement) {
         let font = style["font" as keyof typeof style] as string | null;
         let font_family = style["font-family" as keyof typeof style] as string | null;
         let outvars: { [variable: string]: string } = {};
@@ -249,10 +250,14 @@ function handle_document(target_document: Document | ShadowRoot) {
             explicit_handle_declarations({
                 font: font,
                 font_family: font_family,
-                selector: rule.selectorText,
+                selector: selector,
                 vars: outvars
             })
         }
+    }
+
+    function handle_direct_declarations(rule: CSSStyleRule) {
+        handle_pure_style(rule.style, rule.selectorText)
     }
 
     function handle_css(rules: CSSRuleList) {
@@ -331,6 +336,14 @@ function handle_document(target_document: Document | ShadowRoot) {
                         style.addEventListener("load", () => {
                             handle_sheet((style as HTMLStyleElement | HTMLLinkElement).sheet);
                         });
+                    }
+
+                    for (const node_with_style of [
+                        ...node.querySelectorAll("*[style]"),
+                        ...(node.hasAttribute("style") ? [node] : [])
+                    ]) {
+                        //TODO i think this is recursing and calling itself 31209483209 times
+                        handle_pure_style((node_with_style as HTMLElement).style, (node_with_style as HTMLElement))
                     }
                     // for any normal element added, check if any of the deferred computed styles are now able to
                     // be evaluated, then evaluate them

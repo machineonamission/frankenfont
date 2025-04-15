@@ -55,7 +55,7 @@ const default_config: config_type = {
 type serializable_rule = {
     font: string | null,
     font_family: string | null,
-    selector: string,
+    selector: string | HTMLElement,
     vars: { [variable: string]: string }
 };
 let config: config_type | null;
