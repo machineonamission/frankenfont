@@ -1,4 +1,5 @@
 // FINAL TODO: handle the html style tag :/
+// TODO: seems constructed stylesheets inside <style> tags in the root document are borked
 
 const franken_debug = console.debug.bind(console, '[frankenfont]');
 const franken_log = console.log.bind(console, '[frankenfont]');
@@ -338,13 +339,13 @@ function handle_document(target_document: Document | ShadowRoot) {
                         });
                     }
 
-                    for (const node_with_style of [
-                        ...node.querySelectorAll("*[style]"),
-                        ...(node.hasAttribute("style") ? [node] : [])
-                    ]) {
-                        //TODO i think this is recursing and calling itself 31209483209 times
-                        handle_pure_style((node_with_style as HTMLElement).style, (node_with_style as HTMLElement))
-                    }
+                    // for (const node_with_style of [
+                    //     ...node.querySelectorAll("*[style]"),
+                    //     ...(node.hasAttribute("style") ? [node] : [])
+                    // ]) {
+                    //     //TODO i think this is recursing and calling itself 31209483209 times
+                    //     handle_pure_style((node_with_style as HTMLElement).style, (node_with_style as HTMLElement))
+                    // }
                     // for any normal element added, check if any of the deferred computed styles are now able to
                     // be evaluated, then evaluate them
                 }

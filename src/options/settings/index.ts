@@ -37,6 +37,8 @@ function expand_font_options(config: config_type): config_type {
 }
 
 wait_for_config_and_dom().then(() => {
+    document.querySelector("#version")!.innerHTML = chrome.runtime.getManifest().version;
+
     if (config === null) {
         throw new Error("huh?");
     }

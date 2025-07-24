@@ -24,7 +24,7 @@
 <div class="container mb-2">
     <img src="../../assets/frankenfont full white.svg" alt="frankenfont" id="logo">
     <h1 class="fw-bolder text-center mb-3"><i class="fa-solid fa-gear"></i> Options</h1>
-    <div class="modal-body d-grid" style="gap: 0.75rem">
+    <div class="d-grid" style="gap: 0.75rem">
         <div class="d-grid">
             <button class="btn btn-success" type="button" id="save"><i class="fa-solid fa-floppy-disk"></i> Save Changes
             </button>
@@ -169,7 +169,7 @@
         </fieldset>
         <fieldset>
             <legend><i class="fa-solid fa-engine"></i> Font Replacer Engine:</legend>
-            <form id="engine">
+            <form id="engine" class="ms-4">
                 <div class="form-check">
                     <input class="form-check-input" type="radio" name="engine" id="engine-js" value="js"
                            checked>
@@ -193,5 +193,15 @@
             </form>
         </fieldset>
     </div>
+    <div>
+        <legend><i class="fa-solid fa-circle-info"></i> About</legend>
+        <div class="ms-4">
+            <p><img src="../../assets/moam_just_logo.svg" class="icon" alt=""> Created by <a href="https://machineonamission.me/">Machine on a Mission</a></p>
+            <p><i class="fa-brands fa-github"></i> <a href="https://github.com/machineonamission/font-replacer-extension">GitHub
+                (Source Code, Bug Reports)</a></p>
+            <p><i class="fa-solid fa-code-commit"></i> v<span id="version"></span></p>
+        </div>
+    </div>
+</div>
 </body>
 </html>

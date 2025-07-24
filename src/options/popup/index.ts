@@ -14,5 +14,5 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     });
-    document.querySelector("#version")!.innerHTML = "v" + chrome.runtime.getManifest().version;
+    document.querySelector("#version")!.innerHTML = chrome.runtime.getManifest().version;
 });
